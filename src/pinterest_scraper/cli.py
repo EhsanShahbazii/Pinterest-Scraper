@@ -123,3 +123,95 @@ def interactive() -> argparse.Namespace:
     ns.proxy = ask("Proxy or comma-separated proxies (blank = none)", "")
     ns.no_dedup = not ask_bool("Skip already-seen pins (dedup)?", True)
     return ns
+
+
+def run(args: argparse.Namespace) -> None:
+    """Execute one scraping run for the parsed args."""
+    out_dir = Path(args.out)
+    dedupe = DedupeStore(out_dir / ".seen_pins.json",
+                         enabled=not args.no_dedup, scan_dir=out_dir)
+    proxy_pool = [p.strip() for p in args.proxy.split(",") if p.strip()]
+    banner(args.mode, args.limit, not args.no_dedup, args.download,
+           args.workers, args.delay, args.jitter, len(proxy_pool))
+
+    session = build_session(proxy_pool or None)
+
+    def batch_save(current_pins: list[dict]) -> None:
+        """Incremental save: persist collected pins to disk (crash-safe)."""
+        save_outputs(current_pins, out_dir, stem)
+        console.print(f"  [dim]💾 batch saved ({len(current_pins)} pins so far)[/]")
+
+    if args.mode == "search":
+        stem = re.sub(r"[^a-z0-9]+", "_", args.query.lower()).strip("_")[:40] or "search"
+        pins = search_pins(session, args.query, args.limit, args.delay,
+                           save_cb=batch_save, batch_size=args.batch_size,
+                           jitter=args.jitter)
+    elif args.mode == "pin":
+        stem, pins = "pins", []
+        for ref in args.pins:
+            m = re.search(r"/pin/(\d+)", ref)
+            pin_id = m.group(1) if m else (ref.strip() if ref.strip().isdigit() else "")
+            if pin_id:
+                raw = get_pin_details(session, pin_id)
+                pin = extract_pin(raw or {})
+                if not pin:
+                    pin = {"pin_id": pin_id, "pin_url": f"{BASE}/pin/{pin_id}/",
+                           "local_file": ""}
+                pins.append(pin)
+            else:
+                err_console.print(f"  skipping unrecognised ref: {ref}")
+            polite_sleep(args.delay, args.jitter)
+    else:
+        last = args.url.rstrip("/").split("/")[-1]
+        stem = re.sub(r"[^a-z0-9]+", "_", last.lower())[:40] or "board"
+        pins = board_pins(session, args.url, args.limit, args.delay,
+                          save_cb=batch_save, batch_size=args.batch_size,
+                          jitter=args.jitter)
+
+    # ---- deduplicate --------------------------------------------------------
+    pins = dedupe.filter(pins)
+    if dedupe.dup_pins:
+        console.print(f"[yellow]⏭  skipped {dedupe.dup_pins} duplicate pin(s) "
+                      f"(seen in earlier runs or repeated in results)[/]")
+
+    if not pins:
+        if dedupe.dup_pins and not args.no_dedup:
+            console.print("[green]Nothing new to collect — you already have all "
+                          "these pins. :)[/"]"
+        else:
+            console.print("[red]No pins collected — Pinterest may be rate-limiting. "
+                          "Try a bigger --delay.[/]")
+        sys.exit(1)
+
+    if args.details and args.mode != "pin":
+        enrich_with_details(session, pins, args.delay,
+                            workers=args.workers, jitter=args.jitter)
+
+    stats = None
+    if args.download:
+        console.print()
+        stats = download_all(session, pins, out_dir / "images", args.workers,
+                             args.min_width, args.min_height)
+
+    dedupe.add(pins)
+    dedupe.save()
+    saved = save_outputs(pins, out_dir, stem)
+
+    print_summary(stem, stats, dedupe, saved)
+    console.print(f"\n[bold green]✔ Done — {dedupe.new_pins} new pin(s).[/]")
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if args.mode is None:
+        console.print("[dim]No command given — entering interactive mode. "
+                      "(Use --help for commands.)[/]\n")
+        args = interactive()
+    if args.mode == "interactive":
+        args = interactive()
+    try:
+        run(args)
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Interrupted — batch-saved data is safe on disk.[/]")
+        sys.exit(130)
