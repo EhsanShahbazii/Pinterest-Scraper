@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pinterest-scraper"
+description = "Scrape Pinterest: high-quality pin images + full metadata, deduplicated, batch-saved, with random fingerprints and proxy rotation."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Ehsan Shahbazi" }]
+requires-python = ">=3.10"
+keywords = ["pinterest", "scraper", "scrapping", "images", "downloader", "metadata", "crawler", "data-mining", "cli"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Multimedia :: Graphics",
+]
+dependencies = ["requests>=2.31", "rich>=13.7"]
+
+[project.urls]
+Homepage = "https://github.com/EhsanShahbazii/Pinterest-Scraper"
+Repository = "https://github.com/EhsanShahbazii/Pinterest-Scraper"
+Issues = "https://github.com/EhsanShahbazii/Pinterest-Scraper/issues"
+
+[project.scripts]
+pinterest-scraper = "pinterest_scraper.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
