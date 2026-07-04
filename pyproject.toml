@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pinterest-scraper"
-version = "1.0.0"
+version = "1.1.0"
 description = "Scrape Pinterest: high-quality pin images + full metadata, deduplicated, batch-saved, with random fingerprints and proxy rotation."
 readme = "README.md"
 license = { text = "MIT" }
@@ -33,6 +33,7 @@ Issues = "https://github.com/EhsanShahbazii/Pinterest-Scraper/issues"
 
 [project.scripts]
 pinterest-scraper = "pinterest_scraper.cli:main"
+pinterest-scraper-web = "pinterest_scraper.web.server:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

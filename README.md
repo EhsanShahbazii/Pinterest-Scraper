@@ -140,6 +140,27 @@ src/pinterest_scraper/
 PRs welcome! `pip install -e .` for a dev install, then run
 `pinterest-scraper --help` to verify.
 
+
+## 🌐 Web App (browser UI)
+
+No coding needed — run the built-in web app:
+
+```bash
+pinterest-scraper-web      # then open http://127.0.0.1:8000
+# or: python -m pinterest_scraper.web
+```
+
+A Pinterest-styled single-page app:
+
+- 🔍 **Search or Board mode** with a Pinterest-style masonry image grid
+- ⚙️ **Settings drawer** — limit, min image size, workers, delay/jitter, batch save size, proxies, download/details/dedup toggles
+- 🌍 **Bilingual**: English (default, Inter font) / فارسی (Vazirmatn, full RTL) — one-click toggle
+- 💾 All settings persisted in your browser (localStorage)
+- 📊 **Live progress** over Server-Sent Events: collecting → details → downloading, with stats summary
+- 🖼 Click any card to open the original-quality image; results metadata saved under `web_output/`
+
+API (for integrations): `POST /api/scrape`, `GET /api/jobs/{id}/events` (SSE), `GET /api/jobs/{id}/result`, `POST /api/jobs/{id}/cancel`
+
 ## 📄 License
 
 MIT — see [LICENSE](LICENSE).

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pinterest Scraper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='%23E60023'/><text x='50' y='72' font-size='60' text-anchor='middle' fill='white' font-family='serif' font-weight='bold'>P</text></svg>">
+</head>
+<body>
+
+<header class="topbar">
+  <a class="logo" href="/" aria-label="Pinterest Scraper">
+    <svg width="26" height="26" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#E60023"/><path d="M12.2 5.5c-3.6 0-5.5 2.4-5.5 5 0 1.2.7 2.7 1.7 3.2.2.1.3 0 .3-.1l.3-1.2c0-.1 0-.2-.1-.3-.4-.5-.7-1.3-.7-2 0-2 1.5-3.9 4-3.9 2.2 0 3.7 1.5 3.7 3.6 0 2.4-1.2 4-2.8 4-.9 0-1.5-.7-1.3-1.6l.5-2c.2-.7.1-1.3-.6-1.3s-1.2.7-1.2 1.7c0 .6.2 1 .2 1l-.9 3.6c-.3 1.1 0 2.6.1 2.7 0 .1.1.1.2 0 .1-.1 1.2-1.5 1.5-2.5l.6-2.2c.3.6 1.2 1.1 2.1 1.1 2.8 0 4.7-2.5 4.7-5.9C18.9 7.6 16.1 5.5 12.2 5.5z" fill="#fff"/></svg>
+    <span class="logo-name">Scraper</span>
+  </a>
+
+  <form id="search-form" class="search-wrap">
+    <svg class="search-ico" viewBox="0 0 24 24" width="16" height="16"><path fill="#767676" d="M10 2a8 8 0 105.3 14l4.4 4.4 1.4-1.4-4.4-4.4A8 8 0 0010 2zm0 2a6 6 0 110 12 6 6 0 010-12z"/></svg>
+    <input id="search-input" type="text" data-i18n-ph="searchPlaceholder" autocomplete="off" required>
+  </form>
+
+  <div class="top-actions">
+    <button id="lang-btn" class="icon-btn" title="Language / زبان"><span id="lang-label">فا</span></button>
+    <button id="settings-btn" class="icon-btn" title="Settings" aria-label="Settings">
+      <svg viewBox="0 0 24 24" width="20" height="20"><path fill="#111" d="M19.4 13c.04-.32.06-.65.06-1s-.02-.68-.06-1l2.1-1.65a.5.5 0 00.12-.64l-2-3.46a.5.5 0 00-.6-.22l-2.5 1a7.7 7.7 0 00-1.7-1L14.5 2.4A.5.5 0 0014 2h-4a.5.5 0 00-.5.4l-.37 2.65c-.62.26-1.17.6-1.7 1l-2.5-1a.5.5 0 00-.6.22l-2 3.46a.5.5 0 00.12.64L4.55 11c-.04.32-.06.65-.06 1s.02.68.06 1l-2.1 1.65a.5.5 0 00-.12.64l2 3.46c.13.22.39.31.6.22l2.5-1c.53.4 1.08.74 1.7 1l.37 2.65c.04.24.25.4.5.4h4c.25 0 .46-.16.5-.4l.37-2.65c.62-.26 1.17-.6 1.7-1l2.5 1c.21.09.47 0 .6-.22l2-3.46a.5.5 0 00-.12-.64L19.4 13zM12 15.5A3.5 3.5 0 1112 8.5a3.5 3.5 0 010 7z"/></svg>
+    </button>
+  </div>
+</header>
+
+<main class="container">
+  <!-- mode chips -->
+  <div class="mode-row" role="tablist">
+    <button class="chip active" data-mode="search" data-i18n="modeSearch">Search</button>
+    <button class="chip" data-mode="board" data-i18n="modeBoard">Board</button>
+  </div>
+
+  <!-- live progress card -->
+  <section id="progress-card" class="progress-card hidden">
+    <div class="progress-head">
+      <span id="progress-title">…</span>
+      <button id="cancel-btn" class="btn ghost small" data-i18n="cancel">Cancel</button>
+    </div>
+    <div class="bar"><div id="progress-bar" class="bar-fill"></div></div>
+    <div id="progress-meta" class="progress-meta"></div>
+  </section>
+
+  <!-- stats summary -->
+  <section id="stats-card" class="stats-card hidden"></section>
+
+  <!-- results masonry -->
+  <section id="grid" class="masonry"></section>
+
+  <!-- empty state -->
+  <section id="empty" class="empty">
+    <div class="empty-badge">📌</div>
+    <h2 data-i18n="emptyTitle">Find your inspiration</h2>
+    <p data-i18n="emptyText">Search for anything — like “taylor swift” — and scrape high-quality images with full metadata.</p>
+  </section>
+
+  <section id="error-card" class="error-card hidden"></section>
+</main>
+
+<!-- Settings drawer -->
+<div id="overlay" class="overlay hidden"></div>
+<aside id="settings-drawer" class="drawer" aria-hidden="true">
+  <div class="drawer-head">
+    <h2 data-i18n="settings">Settings</h2>
+    <button id="close-settings" class="icon-btn">✕</button>
+  </div>
+  <div class="drawer-body">
+    <div class="toggle-row"><label data-i18n="optDownload">Download images</label><input type="checkbox" id="opt-download" checked></div>
+    <div class="toggle-row"><label data-i18n="optDetails">Fetch full details (saves, comments…)</label><input type="checkbox" id="opt-details" checked></div>
+    <div class="toggle-row"><label data-i18n="optDedup">Skip duplicates</label><input type="checkbox" id="opt-dedup" checked></div>
+
+    <h3 data-i18n="qualityHeader">Quality &amp; limits</h3>
+    <div class="field"><label data-i18n="optLimit">Max pins</label><input type="number" id="opt-limit" value="25" min="1" max="500"></div>
+    <div class="field"><label data-i18n="optMinWidth">Min image width (px)</label><input type="number" id="opt-min-width" value="0" min="0"></div>
+    <div class="field"><label data-i18n="optMinHeight">Min image height (px)</label><input type="number" id="opt-min-height" value="0" min="0"></div>
+
+    <h3 data-i18n="perfHeader">Performance &amp; politeness</h3>
+    <div class="field"><label data-i18n="optWorkers">Concurrent workers</label><input type="number" id="opt-workers" value="4" min="1" max="16"></div>
+    <div class="field"><label data-i18n="optDelay">Delay between pages (s)</label><input type="number" id="opt-delay" value="1" min="0" step="0.1"></div>
+    <div class="field"><label data-i18n="optJitter">Random jitter (s)</label><input type="number" id="opt-jitter" value="0.5" min="0" step="0.1"></div>
+    <div class="field"><label data-i18n="optBatch">Save every N pins</label><input type="number" id="opt-batch" value="10" min="1" max="100"></div>
+    <div class="field"><label data-i18n="optProxy">Proxies (comma-separated, optional)</label><input type="text" id="opt-proxy" placeholder="http://host:port"></div>
+
+    <button id="reset-settings" class="btn ghost full" data-i18n="resetDefaults">Reset to defaults</button>
+  </div>
+</aside>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>
