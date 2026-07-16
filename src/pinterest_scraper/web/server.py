@@ -27,7 +27,8 @@ from pydantic import BaseModel, Field
 from ..dedupe import DedupeStore
 from ..downloader import download_all
 from ..http import build_session
-from ..scraper import board_pins, enrich_with_details, search_pins, suggest_queries
+from ..scraper import (board_pins, enrich_with_details, search_pins,
+                       typeahead_suggestions)
 from ..storage import save_outputs
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -258,7 +259,7 @@ def suggest(q: str = ""):
             return {"suggestions": hit[1]}
         try:
             session = build_session()
-            out = suggest_queries(session, q)
+            out = typeahead_suggestions(session, q)
         except Exception:  # noqa: BLE001 — suggestions must never break the UI
             out = []
         _suggest_cache[q] = (now, out)

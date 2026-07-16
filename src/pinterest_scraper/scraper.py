@@ -255,8 +255,14 @@ def board_pins(session: requests.Session, board_url: str, limit: int,
     return pins[:limit]
 
 
-def suggest_queries(session: requests.Session, term: str) -> list[str]:
-    """Live search suggestions from Pinterest's advanced typeahead endpoint."""
+def typeahead_suggestions(session: requests.Session, term: str) -> list[dict]:
+    """Rich live suggestions: query completions AND user profiles with avatars.
+
+    Returns a list of dicts:
+      {"type": "query", "text": "..."}
+      {"type": "user", "text": "Full Name", "sub": "@username",
+       "image": "https://...", "verified": bool, "url": "https://.../username/"}
+    """
     from .config import SUGGEST_URL
 
     term = term.strip()
@@ -265,16 +271,44 @@ def suggest_queries(session: requests.Session, term: str) -> list[str]:
     options = {"term": term, "pin_id": ""}
     data, _ = api_data(session, SUGGEST_URL, options, "/",
                        handler="www/[username].js")
-    out: list[str] = []
+    out: list[dict] = []
+    seen: set[str] = set()
+
+    def add(item: dict) -> None:
+        itype = item.get("type", "query")
+        if itype == "query":
+            q = str(item.get("query") or item.get("label") or "").strip()
+            key = "q:" + q.lower()
+            if q and key not in seen:
+                seen.add(key)
+                out.append({"type": "query", "text": q})
+        elif itype == "user":
+            name = str(item.get("full_name") or item.get("first_name") or "").strip()
+            username = str(item.get("username") or "").strip()
+            key = "u:" + username.lower()
+            if username and key not in seen:
+                seen.add(key)
+                out.append({
+                    "type": "user",
+                    "text": name or username,
+                    "sub": "@" + username,
+                    "image": item.get("image_medium_url") or item.get("image_small_url") or "",
+                    "verified": bool(item.get("verified_identity")) or bool(item.get("verified")),
+                    "url": f"https://www.pinterest.com/{username}/",
+                })
+
     if isinstance(data, dict):
         for item in data.get("items", []) or []:
             if isinstance(item, dict):
-                q = str(item.get("query") or item.get("label") or "").strip()
-                if q and q.lower() not in {o.lower() for o in out}:
-                    out.append(q)
+                add(item)
     elif isinstance(data, list):
         for item in data:
-            q = (item.get("query") if isinstance(item, dict) else str(item)).strip()
-            if q and q.lower() not in {o.lower() for o in out}:
-                out.append(q)
-    return out[:8]
+            if isinstance(item, dict):
+                add(item)
+    return out[:10]
+
+
+def suggest_queries(session: requests.Session, term: str) -> list[str]:
+    """Query-only suggestions (backwards compatible)."""
+    return [s["text"] for s in typeahead_suggestions(session, term)
+            if s["type"] == "query"]
