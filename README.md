@@ -59,6 +59,18 @@ never loses work.
 
 ### 🌐 Web App
 
+
+**v1.2 power features:**
+- 🌙 **Dark mode** (auto-detects system theme, smooth transitions) · 🇬🇧/🇮🇷 EN/FA · localStorage persistence
+- 🔍 **Live suggestions** with real user avatars (350 ms debounce, cached)
+- 📦 **Batch mode** — `taylor swift, dua lipa, ariana grande` in one job
+- 🖼 **Pin detail modal** — full metadata, color chips, original download
+- 🔮 **Visual search** — "More like this" finds visually similar pins from any card
+- 🗂 **History / mini-DAM** — browse & re-open past runs from the sidebar
+- ⬇ **Exports** — ZIP of images + XLSX spreadsheet for any job or run
+- ⏰ **Scheduler** — recurring scrapes (e.g. every 24 h) with auto-dedup, growing trend dataset
+- 📊 **Insights chart** — top pins by saves (Chart.js), skeleton loaders, recent-search chips
+
 <!-- Row 1: web app -->
 <p align="center">
   <img src="docs/screenshots/web-home.png" alt="Web app — home & search" width="85%">
@@ -144,7 +156,7 @@ Requires Python 3.10+. Dependencies (installed automatically):
 pinterest-scraper
 
 # Search a singer and download images ≥600px wide
-pinterest-scraper search "taylor swift" -n 25 --download --min-width 600
+pinterest-scraper search "Ana de Armas" -n 25 --download --min-width 600
 
 # Rich per-pin stats, fetched concurrently
 pinterest-scraper search "ariana grande" -n 50 --download --details --workers 6
@@ -168,7 +180,7 @@ from pinterest_scraper.http import build_session
 from pinterest_scraper.scraper import search_pins
 
 session = build_session()
-pins = search_pins(session, "taylor swift", limit=10)
+pins = search_pins(session, "Ana de Armas", limit=10)
 print(pins[0]["image_url"], pins[0]["saves"])
 ```
 

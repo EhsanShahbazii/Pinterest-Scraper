@@ -5,6 +5,7 @@ SEARCH_URL = f"{BASE}/resource/BaseSearchResource/get/"
 PIN_URL = f"{BASE}/resource/PinResource/get/"
 BOARD_URL = f"{BASE}/resource/BoardResource/get/"
 SUGGEST_URL = f"{BASE}/resource/AdvancedTypeaheadResource/get/"
+RELATED_URL = f"{BASE}/resource/RelatedModulesResource/get/"
 BOARD_FEED_URL = f"{BASE}/resource/BoardFeedResource/get/"
 
 USER_AGENTS = [

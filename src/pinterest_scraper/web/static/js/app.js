@@ -3,6 +3,25 @@
 
 /* ---------------- i18n ---------------- */
 const I18N = {
+  recent: {en: "Recent:", fa: "اخیر:"},
+  download: {en: "Download", fa: "دانلود"},
+  visualSearch: {en: "More like this", fa: "پین‌های مشابه"},
+  pinDetails: {en: "Details", fa: "جزئیات"},
+  chartTitle: {en: "Engagement insights", fa: "نمودار تعامل"},
+  historyTitle: {en: "Past runs", fa: "اجراهای قبلی"},
+  schedulesTitle: {en: "Scheduled scrapes", fa: "جستجوهای زمان‌بندی‌شده"},
+  schQuery: {en: "Query (comma-separated for batch)", fa: "جستجو (با کاما برای چندتایی)"},
+  schEvery: {en: "Run every (hours)", fa: "هر چند ساعت"},
+  schLimit: {en: "Pins per run", fa: "تعداد پین در هر اجرا"},
+  schAdd: {en: "Schedule", fa: "زمان‌بندی"},
+  noHistory: {en: "No runs yet — scrape something!", fa: "هنوز اجرایی ثبت نشده"},
+  noSchedules: {en: "No schedules yet.", fa: "زمان‌بندی‌ای ثبت نشده."},
+  batchDone: {en: "All queries done", fa: "همه جستجوها تمام شد"},
+  runningQuery: {en: "Query", fa: "جستجو"},
+  of: {en: "of", fa: "از"},
+  visualSearching: {en: "Finding similar pins…", fa: "در حال یافتن پین‌های مشابه…"},
+  visualResults: {en: "Visually similar pins", fa: "پین‌های مشابه"},
+  openRun: {en: "Open", fa: "بازکردن"},
   en: {
     searchPlaceholder: 'Search pins or paste a board URL…',
     modeSearch: 'Search', modeBoard: 'Board',
@@ -15,7 +34,7 @@ const I18N = {
     optDelay: 'Delay between pages (s)', optJitter: 'Random jitter (s)',
     optBatch: 'Save every N pins', optProxy: 'Proxies (comma-separated, optional)',
     emptyTitle: 'Find your inspiration',
-    emptyText: 'Search for anything — like “taylor swift” — and scrape high-quality images with full metadata.',
+    emptyText: 'Search for anything — like “Ana de Armas” — and scrape high-quality images with full metadata.',
     collecting: 'Collecting pins', details: 'Fetching details', downloading: 'Downloading images',
     saving: 'Saving metadata', done: 'Done', cancelled: 'Cancelled', error: 'Error',
     pins: 'pins', savedCount: 'Downloaded', dupes: 'Duplicates skipped',
@@ -37,7 +56,7 @@ const I18N = {
     optDelay: 'تأخیر بین صفحه‌ها (ثانیه)', optJitter: 'لرزش تصادفی (ثانیه)',
     optBatch: 'ذخیره هر N پین', optProxy: 'پروکسی‌ها (با کاما جدا کنید، اختیاری)',
     emptyTitle: 'الهام خود را پیدا کنید',
-    emptyText: 'هر چیزی را جستجو کنید — مثل «taylor swift» — و تصاویر باکیفیت با جزئیات کامل دریافت کنید.',
+    emptyText: 'هر چیزی را جستجو کنید — مثل «Ana de Armas» — و تصاویر باکیفیت با جزئیات کامل دریافت کنید.',
     collecting: 'در حال جمع‌آوری پین‌ها', details: 'دریافت جزئیات', downloading: 'دانلود تصاویر',
     saving: 'ذخیره اطلاعات', done: 'انجام شد', cancelled: 'لغو شد', error: 'خطا',
     pins: 'پین', savedCount: 'دانلودشده', dupes: 'تکراری ردشده',
@@ -80,6 +99,7 @@ function applyLang() {
   });
   $('lang-label').textContent = settings.lang === 'en' ? 'فا' : 'EN';
   document.title = settings.lang === 'fa' ? 'اسکرپر پینترست' : 'Pinterest Scraper';
+  renderRecent();
 }
 
 /* ---------------- settings drawer ---------------- */
@@ -125,7 +145,8 @@ async function startScrape() {
   hideError();
   $('empty').classList.add('hidden');
   $('stats-card').classList.add('hidden');
-  $('grid').innerHTML = '';
+  showSkeletons();
+  addRecent(query);
   showProgress(t.collecting, true);
 
   const body = { mode: settings.mode, query, ...settings };
@@ -178,6 +199,12 @@ async function finishJob(ev) {
   lastPins = data.pins || [];
   renderStats(ev);
   renderGrid(lastPins);
+  renderChart();
+  if (currentJob) {
+    $('exp-zip').href = `/api/jobs/${currentJob}/export/zip`;
+    $('exp-xlsx').href = `/api/jobs/${currentJob}/export/xlsx`;
+    $('export-bar').classList.remove('hidden');
+  }
   $('progress-card').classList.add('hidden');
   currentJob = null;
 }
@@ -230,7 +257,7 @@ function renderGrid(pins) {
   pins.forEach((pin, i) => {
     const img = pin.image_url || '';
     const local = pin.local_file
-      ? `/api/jobs/${currentJob || 'latest'}/images/${encodeURIComponent(pin.local_file)}` : '';
+      ? `/api/images/${encodeURIComponent(pin.local_file)}` : '';
     const src = local || img;
     const card = document.createElement('article');
     card.className = 'pin-card';
@@ -248,7 +275,9 @@ function renderGrid(pins) {
           <a href="${img}" target="_blank" rel="noopener">${I18N[settings.lang].openOrig} ↗</a>
         </div>
       </div>`;
-    card.querySelector('.pin-save').addEventListener('click', () => {
+    card.addEventListener('click', () => openPinModal(pin, src));
+    card.querySelector('.pin-save').addEventListener('click', (e) => {
+      e.stopPropagation();
       window.open(img, '_blank');
     });
     grid.appendChild(card);
@@ -372,3 +401,192 @@ input.addEventListener('blur', () => setTimeout(hideSuggest, 150));
 document.addEventListener('click', (e) => {
   if (!e.target.closest('.search-wrap')) hideSuggest();
 });
+
+/* ================= Pin detail modal ================= */
+function openPinModal(pin, src) {
+  const t = I18N[settings.lang] || I18N.en;
+  $('pm-img').src = src || pin.image_url || '';
+  $('pm-title').textContent = pin.title || pin.pin_id;
+  $('pm-desc').textContent = pin.description || '';
+  const rows = [
+    ['📌', t.pins, fmtNum(pin.saves)],
+    ['💬', 'Comments', fmtNum(pin.comments)],
+    ['👤', 'Creator', pin.creator ? `@${pin.creator.username}` : '—'],
+    ['📋', 'Board', pin.board ? pin.board.name : '—'],
+    ['📐', 'Size', pin.width ? `${pin.width}×${pin.height}` : '—'],
+    ['📅', 'Date', (pin.created_at || '').slice(0, 10) || '—'],
+  ];
+  $('pm-table').innerHTML = rows.map(r =>
+    `<tr><td>${r[0]} ${r[1]}</td><td>${escapeHtml(String(r[2] || '—'))}</td></tr>`).join('');
+  const colors = $('pm-colors');
+  colors.innerHTML = '';
+  if (pin.dominant_color) {
+    const c = document.createElement('div');
+    c.className = 'color-chip';
+    c.style.background = pin.dominant_color;
+    c.title = pin.dominant_color;
+    c.onclick = () => navigator.clipboard?.writeText(pin.dominant_color);
+    colors.appendChild(c);
+  }
+  $('pm-download').href = pin.image_url || '#';
+  $('pm-download').download = `pin_${pin.pin_id}.jpg`;
+  $('pm-pin-link').href = pin.pin_url || '#';
+  $('pm-visual').onclick = () => runVisualSearch(pin.pin_id);
+  $('pin-modal').classList.remove('hidden');
+}
+function closePinModal() { $('pin-modal').classList.add('hidden'); }
+$('close-pin-modal').addEventListener('click', closePinModal);
+$('pin-modal').addEventListener('click', (e) => { if (e.target.id === 'pin-modal') closePinModal(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePinModal(); });
+
+/* ================= Visual search ================= */
+async function runVisualSearch(pinId) {
+  const t = I18N[settings.lang] || I18N.en;
+  closePinModal();
+  showSkeletons(10);
+  showProgress(t.visualSearching, true);
+  try {
+    const res = await fetch(`/api/visual-search?pin_id=${pinId}&limit=30`);
+    const data = await res.json();
+    $('progress-card').classList.add('hidden');
+    if (!res.ok) { showError(data.detail || 'visual search failed'); return; }
+    lastPins = data.pins || [];
+    window._lastPins = lastPins;
+    $('stats-card').innerHTML = `<span class="stat-pill">🔮 ${t.visualResults}: <b>${lastPins.length}</b></span>`;
+    $('stats-card').classList.remove('hidden');
+    $('export-bar').classList.add('hidden');
+    $('chart-card').classList.add('hidden');
+    renderGrid(lastPins);
+  } catch {
+    $('progress-card').classList.add('hidden');
+    showError('visual search failed');
+  }
+}
+
+/* ================= History & schedules ================= */
+function fmtAgo(ts) {
+  if (!ts) return '';
+  const m = Math.floor((Date.now() / 1000 - ts) / 60);
+  if (m < 60) return `${m}m`;
+  if (m < 1440) return `${Math.floor(m / 60)}h`;
+  return `${Math.floor(m / 1440)}d`;
+}
+async function loadHistory() {
+  const list = $('history-list');
+  try {
+    const { runs } = await (await fetch('/api/history')).json();
+    if (!runs.length) { list.innerHTML = `<p class="pm-desc">${I18N[settings.lang].noHistory}</p>`; }
+    else {
+      list.innerHTML = '';
+      runs.slice(0, 30).forEach(r => {
+        const item = document.createElement('div');
+        item.className = 'run-item';
+        item.innerHTML = `
+          <div class="ri-main">
+            <span class="ri-q">${escapeHtml(r.query)}</span>
+            <span class="ri-sub">${r.mode} · ${r.count} 📌 · ${fmtAgo(r.ts)}</span>
+          </div>
+          <button class="btn ghost small">${I18N[settings.lang].openRun}</button>`;
+        item.querySelector('.btn').onclick = (e) => {
+          e.stopPropagation();
+          openRun(r.job_id);
+        };
+        item.onclick = () => openRun(r.job_id);
+        list.appendChild(item);
+      });
+    }
+  } catch { list.innerHTML = ''; }
+}
+async function openRun(jobId) {
+  const t = I18N[settings.lang] || I18N.en;
+  const res = await fetch(`/api/runs/${jobId}`);
+  if (!res.ok) return;
+  const data = await res.json();
+  lastPins = data.pins || [];
+  window._lastPins = lastPins;
+  $('stats-card').innerHTML = `<span class="stat-pill">🗂 <b>${lastPins.length}</b> ${t.pins}</span>`;
+  $('stats-card').classList.remove('hidden');
+  $('exp-zip').href = `/api/runs/${jobId}/export/zip`;
+  $('exp-xlsx').href = `/api/runs/${jobId}/export/xlsx`;
+  $('export-bar').classList.remove('hidden');
+  $('chart-card').classList.remove('hidden');
+  renderChart();
+  renderGrid(lastPins);
+  openHistory(false);
+}
+function openHistory(open) {
+  const d = $('history-drawer');
+  d.classList.toggle('open', open);
+  d.setAttribute('aria-hidden', String(!open));
+  $('overlay').classList.toggle('hidden', !open);
+  if (open) { loadHistory(); loadSchedules(); }
+}
+$('history-btn').addEventListener('click', () => openHistory(true));
+$('close-history').addEventListener('click', () => openHistory(false));
+
+async function loadSchedules() {
+  const list = $('schedule-list');
+  const t = I18N[settings.lang] || I18N.en;
+  try {
+    const { schedules } = await (await fetch('/api/schedules')).json();
+    if (!schedules.length) { list.innerHTML = `<p class="pm-desc">${t.noSchedules}</p>`; return; }
+    list.innerHTML = '';
+    schedules.forEach(s => {
+      const item = document.createElement('div');
+      item.className = 'sch-item';
+      item.innerHTML = `
+        <div><div class="sch-q">${escapeHtml(s.query)}</div>
+        <div class="sch-meta">⏱ ${s.interval_hours}h · ${s.limit} 📌 · ×${s.runs}</div></div>
+        <button class="icon-btn" title="delete">🗑</button>`;
+      item.querySelector('button').onclick = async () => {
+        await fetch(`/api/schedules/${s.id}`, { method: 'DELETE' });
+        loadSchedules();
+      };
+      list.appendChild(item);
+    });
+  } catch { /* ignore */ }
+}
+$('sch-add').addEventListener('click', async () => {
+  const q = $('sch-query').value.trim();
+  if (!q) return;
+  await fetch('/api/schedules', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query: q, mode: settings.mode,
+      interval_hours: Number($('sch-hours').value) || 24,
+      limit: Number($('sch-limit').value) || 25 }),
+  });
+  $('sch-query').value = '';
+  loadSchedules();
+});
+
+/* ================= Analytics chart ================= */
+function renderChart() {
+  const pins = (window._lastPins || lastPins || []).filter(p => p.saves != null);
+  if (pins.length < 2) { $('chart-card').classList.add('hidden'); return; }
+  const top = [...pins].sort((a, b) => b.saves - a.saves).slice(0, 12);
+  $('chart-card').classList.remove('hidden');
+  const dark = document.body.dataset.theme === 'dark';
+  const ctx = document.getElementById('chart-canvas');
+  if (window._chart) window._chart.destroy();
+  window._chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: top.map(p => (p.title || p.pin_id).slice(0, 22)),
+      datasets: [{
+        label: 'Saves', data: top.map(p => p.saves),
+        backgroundColor: '#E60023', borderRadius: 6,
+      }],
+    },
+    options: {
+      indexAxis: 'y', plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: dark ? '#A7A7A7' : '#5f5f5f' }, grid: { color: dark ? '#333' : '#eee' } },
+        y: { ticks: { color: dark ? '#A7A7A7' : '#5f5f5f' }, grid: { display: false } },
+      },
+    },
+  });
+}
+
+/* ================= init ================= */
+initTheme();
+renderRecent();
