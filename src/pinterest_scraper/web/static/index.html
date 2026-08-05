@@ -109,17 +109,16 @@
   </div>
   <div class="drawer-body">
     <div id="history-list" class="history-list"></div>
-    <h3 data-i18n="schedulesTitle">Scheduled scrapes</h3>
-    <div id="schedule-list" class="schedule-list"></div>
-    <div class="field"><label data-i18n="schQuery">Query (comma-separated for batch)</label>
-      <input type="text" id="sch-query" placeholder="taylor swift, ariana grande"></div>
-    <div class="field"><label data-i18n="schEvery">Run every (hours)</label>
-      <input type="number" id="sch-hours" value="24" min="1"></div>
-    <div class="field"><label data-i18n="schLimit">Pins per run</label>
-      <input type="number" id="sch-limit" value="25" min="1"></div>
-    <button id="sch-add" class="btn primary full" data-i18n="schAdd">Schedule</button>
+    <button id="clear-runs" class="btn ghost full" data-i18n="clearRuns">🗑 Clear past runs list</button>
   </div>
 </aside>
+
+<!-- Selection toolbar -->
+<div id="selection-bar" class="selection-bar hidden">
+  <span id="sel-count" class="sel-count">0</span>
+  <button id="sel-delete" class="btn primary small">🗑 <span data-i18n="deleteSelected">Delete selected</span></button>
+  <button id="sel-cancel" class="btn ghost small" data-i18n="cancelSel">Cancel</button>
+</div>
 
 <!-- Settings drawer -->
 <div id="overlay" class="overlay hidden"></div>
@@ -132,6 +131,7 @@
     <div class="toggle-row"><label data-i18n="optDownload">Download images</label><input type="checkbox" id="opt-download" checked></div>
     <div class="toggle-row"><label data-i18n="optDetails">Fetch full details (saves, comments…)</label><input type="checkbox" id="opt-details" checked></div>
     <div class="toggle-row"><label data-i18n="optDedup">Skip duplicates</label><input type="checkbox" id="opt-dedup" checked></div>
+    <div class="toggle-row"><label data-i18n="optInsights">Show insights chart</label><input type="checkbox" id="opt-insights"></div>
 
     <h3 data-i18n="qualityHeader">Quality &amp; limits</h3>
     <div class="field"><label data-i18n="optLimit">Max pins</label><input type="number" id="opt-limit" value="25" min="1" max="500"></div>

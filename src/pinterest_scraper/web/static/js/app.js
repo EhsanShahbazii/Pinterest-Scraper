@@ -3,6 +3,16 @@
 
 /* ---------------- i18n ---------------- */
 const I18N = {
+  boardTip: {en: "Paste a Pinterest board URL (pinterest.com/...) to scrape it", fa: "لینک کامل بورد پینترست را وارد کنید"},
+  optInsights: {en: "Show insights chart", fa: "نمایش نمودار تحلیلی"},
+  clearRuns: {en: "🗑 Clear past runs list", fa: "🗑 پاک کردن لیست اجراها"},
+  clearRecents: {en: "Clear", fa: "پاک کردن"},
+  noResults: {en: "No results found for this query.", fa: "نتیجه‌ای برای این جستجو پیدا نشد."},
+  deleteSelected: {en: "Delete selected", fa: "حذف انتخاب‌شده‌ها"},
+  cancelSel: {en: "Cancel", fa: "لغو"},
+  selectedCount: {en: "selected", fa: "انتخاب‌شده"},
+  deletedMsg: {en: "images deleted", fa: "تصویر حذف شد"},
+  selectHint: {en: "Selection mode — tap images to select, then delete or cancel", fa: "حالت انتخاب — روی تصاویر بزنید، سپس حذف یا لغو"},
   nothingNew: {en: "Nothing new — all these pins are already collected (dedup). Try another query, or turn off dedup in ⚙️ settings.", fa: "چیز جدیدی نبود — این پین‌ها قبلاً جمع‌آوری شده‌اند. جستجوی دیگری امتحان کنید یا حذف تکرار را در ⚙️ خاموش کنید."},
   recent: {en: "Recent:", fa: "اخیر:"},
   download: {en: "Download", fa: "دانلود"},
@@ -74,6 +84,7 @@ const DEFAULTS = {
   download: true, details: true, dedup: true,
   limit: 25, min_width: 0, min_height: 0,
   workers: 4, delay: 1.0, jitter: 0.5, batch_size: 10, proxy: '',
+  show_insights: false,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -108,6 +119,7 @@ function syncDrawerFromSettings() {
   $('opt-download').checked = settings.download;
   $('opt-details').checked = settings.details;
   $('opt-dedup').checked = settings.dedup;
+  $('opt-insights').checked = settings.show_insights;
   $('opt-limit').value = settings.limit;
   $('opt-min-width').value = settings.min_width;
   $('opt-min-height').value = settings.min_height;
@@ -121,6 +133,7 @@ function readDrawerToSettings() {
   settings.download = $('opt-download').checked;
   settings.details = $('opt-details').checked;
   settings.dedup = $('opt-dedup').checked;
+  settings.show_insights = $('opt-insights').checked;
   settings.limit = +$('opt-limit').value || DEFAULTS.limit;
   settings.min_width = +$('opt-min-width').value || 0;
   settings.min_height = +$('opt-min-height').value || 0;
@@ -203,16 +216,23 @@ async function finishJob(ev) {
   const data = await res.json();
   lastPins = data.pins || [];
   renderStats(ev);
+  const hasImages = lastPins.some(p => p.local_file);
   if (!lastPins.length) {
     const t2 = I18N[settings.lang] || I18N.en;
-    showError(t2.nothingNew || 'Nothing new to collect — try a different query or disable dedup in settings.');
+    if (hasImages || (ev.stats && ev.stats.downloaded > 0)) {
+      showError(t2.nothingNew);
+    } else {
+      showError(t2.noResults || 'No results found for this query.');
+    }
   }
   renderGrid(lastPins);
   renderChart();
-  if (currentJob) {
+  if (currentJob && hasImages) {
     $('exp-zip').href = `/api/jobs/${currentJob}/export/zip`;
     $('exp-xlsx').href = `/api/jobs/${currentJob}/export/xlsx`;
     $('export-bar').classList.remove('hidden');
+  } else {
+    $('export-bar').classList.add('hidden');
   }
   $('progress-card').classList.add('hidden');
   currentJob = null;
@@ -318,6 +338,9 @@ $('lang-btn').addEventListener('click', () => {
   saveSettings(); applyLang();
 });
 document.querySelectorAll('.chip').forEach(chip => {
+  chip.title = chip.dataset.mode === 'board'
+    ? (I18N[settings.lang].boardTip || 'Paste a Pinterest board URL')
+    : '';
   chip.addEventListener('click', () => {
     document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
     chip.classList.add('active');
@@ -343,7 +366,7 @@ const input = $('search-input');
 let debounceTimer = null, sugItems = [], sugIndex = -1, sugAbort = null;
 
 function hideSuggest() {
-  sugList.classList.add('hidden');
+  sugList.classList.remove('show');
   sugList.innerHTML = '';
   sugItems = []; sugIndex = -1;
 }
@@ -517,7 +540,7 @@ async function openRun(jobId) {
   $('stats-card').classList.remove('hidden');
   $('exp-zip').href = `/api/runs/${jobId}/export/zip`;
   $('exp-xlsx').href = `/api/runs/${jobId}/export/xlsx`;
-  $('export-bar').classList.remove('hidden');
+  $('export-bar').classList.toggle('hidden', !lastPins.some(p => p.local_file));
   $('chart-card').classList.remove('hidden');
   renderChart();
   renderGrid(lastPins);
@@ -528,9 +551,13 @@ function openHistory(open) {
   d.classList.toggle('open', open);
   d.setAttribute('aria-hidden', String(!open));
   $('overlay').classList.toggle('hidden', !open);
-  if (open) { loadHistory(); loadSchedules(); }
+  if (open) { loadHistory(); }
 }
 $('history-btn').addEventListener('click', () => openHistory(true));
+$('clear-runs').addEventListener('click', async () => {
+  await fetch('/api/history', { method: 'DELETE' });
+  loadHistory();
+});
 $('close-history').addEventListener('click', () => openHistory(false));
 
 async function loadSchedules() {
@@ -570,6 +597,7 @@ $('sch-add').addEventListener('click', async () => {
 
 /* ================= Analytics chart ================= */
 function renderChart() {
+  if (!settings.show_insights) { $('chart-card').classList.add('hidden'); return; }
   const pins = (window._lastPins || lastPins || []).filter(p => p.saves != null);
   if (pins.length < 2) { $('chart-card').classList.add('hidden'); return; }
   const top = [...pins].sort((a, b) => b.saves - a.saves).slice(0, 12);
@@ -649,11 +677,14 @@ function renderRecent() {
   row.classList.remove('hidden');
   const t = I18N[settings.lang] || I18N.en;
   row.innerHTML = `<span class="row-label">${list.length ? (t.recent || 'Recent:') : 'Try:'}</span>` +
-    items.map(q => `<button class="chip recent-chip">${esc(q)}</button>`).join('');
+    items.map(q => `<button class="chip recent-chip">${esc(q)}</button>`).join('') +
+    (list.length ? `<button id="clear-recents" class="chip clear-chip">✕ ${t.clearRecents || 'Clear'}</button>` : '');
   row.querySelectorAll('.recent-chip').forEach(b => b.onclick = () => {
     document.getElementById('search-input').value = b.textContent;
     startScrape();
   });
+  const clr = row.querySelector('#clear-recents');
+  if (clr) clr.onclick = () => { localStorage.removeItem('recentSearches'); renderRecent(); };
 }
 
 /* ---------- skeletons ---------- */
@@ -669,3 +700,90 @@ function showSkeletons(n = 12) {
     grid.appendChild(d);
   }
 }
+
+/* ================= image selection & deletion ================= */
+let selectionMode = false;
+const selectedFiles = new Set();
+let pressTimer = null;
+
+function setSelectionMode(on) {
+  selectionMode = on;
+  document.querySelectorAll('.pin-card').forEach(c => c.classList.toggle('selectable', on));
+  if (!on) {
+    selectedFiles.clear();
+    document.querySelectorAll('.pin-card.selected').forEach(c => c.classList.remove('selected'));
+  }
+  updateSelBar();
+  if (on) {
+    const t = I18N[settings.lang] || I18N.en;
+    const msg = document.getElementById('progress-msg');
+    const card = document.getElementById('progress-card');
+    if (msg && card) { msg.textContent = t.selectHint; card.classList.remove('hidden');
+      setTimeout(() => card.classList.add('hidden'), 2600); }
+  }
+}
+function updateSelBar() {
+  const bar = document.getElementById('selection-bar');
+  bar.classList.toggle('hidden', !selectionMode);
+  document.getElementById('sel-count').textContent = `${selectedFiles.size} ${I18N[settings.lang].selectedCount || 'selected'}`;
+}
+function toggleSelect(card) {
+  const pin = card._pin;
+  if (!pin || !pin.local_file) return;
+  if (selectedFiles.has(pin.local_file)) {
+    selectedFiles.delete(pin.local_file);
+    card.classList.remove('selected');
+  } else {
+    selectedFiles.add(pin.local_file);
+    card.classList.add('selected');
+  }
+  updateSelBar();
+}
+
+/* long-press on a card enters selection mode (delegated) */
+document.addEventListener('pointerdown', (e) => {
+  const card = e.target.closest('.pin-card');
+  if (!card || selectionMode) return;
+  pressTimer = setTimeout(() => { pressTimer = null; setSelectionMode(true); toggleSelect(card); }, 450);
+});
+['pointerup', 'pointerleave', 'pointercancel', 'scroll'].forEach(ev =>
+  document.addEventListener(ev, () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } }, true));
+
+/* click behavior while in selection mode */
+document.addEventListener('click', (e) => {
+  if (!selectionMode) return;
+  const card = e.target.closest('.pin-card');
+  if (!card) return;
+  e.stopPropagation();
+  e.preventDefault();
+  toggleSelect(card);
+}, true);
+
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && selectionMode) setSelectionMode(false); });
+
+$('sel-cancel').addEventListener('click', () => setSelectionMode(false));
+$('sel-delete').addEventListener('click', async () => {
+  if (!selectedFiles.size) return;
+  const t = I18N[settings.lang] || I18N.en;
+  const res = await fetch('/api/images/delete', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ names: [...selectedFiles] }),
+  });
+  const { deleted } = await res.json();
+  document.querySelectorAll('.pin-card.selected').forEach(c => c.remove());
+  setSelectionMode(false);
+  lastPins = lastPins.filter(p => !p.local_file || !selectedFiles.has(p.local_file));
+  window._lastPins = lastPins;
+  $('stats-card').innerHTML = `<span class="stat-pill">🗑 ${deleted} ${t.deletedMsg}</span>`;
+  $('export-bar').classList.add('hidden');
+  if (!document.querySelector('.pin-card')) $('empty').classList.remove('hidden');
+});
+
+/* patch renderGrid cards to carry their pin */
+const _origRenderGrid = renderGrid;
+renderGrid = function (pins) {
+  _origRenderGrid(pins);
+  const cards = document.querySelectorAll('.pin-card');
+  pins.forEach((p, i) => { if (cards[i]) cards[i]._pin = p; });
+  if (selectionMode) document.querySelectorAll('.pin-card').forEach(c => c.classList.add('selectable'));
+};

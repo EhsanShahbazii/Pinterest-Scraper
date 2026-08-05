@@ -531,6 +531,41 @@ def _start_scheduler():
     threading.Thread(target=_scheduler_loop, daemon=True).start()
 
 
+
+# ---------------- image management ----------------
+class DeleteImagesIn(BaseModel):
+    names: list[str] = Field(default_factory=list)
+    all: bool = False
+
+
+@app.post("/api/images/delete")
+def delete_images(payload: DeleteImagesIn):
+    img_dir = (_job_out_dir() / "images").resolve()
+    if payload.all:
+        targets = [p for p in img_dir.glob("*") if p.is_file()]
+    else:
+        targets = []
+        for name in payload.names:
+            p = (img_dir / name).resolve()
+            if str(p).startswith(str(img_dir)) and p.is_file():
+                targets.append(p)
+    deleted = 0
+    for p in targets:
+        try:
+            p.unlink()
+            deleted += 1
+        except OSError:
+            pass
+    return {"deleted": deleted}
+
+
+@app.delete("/api/history")
+def clear_history():
+    if REGISTRY.exists():
+        REGISTRY.unlink()
+    return {"ok": True}
+
+
 def main():
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000, log_level="warning")
