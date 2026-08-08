@@ -434,22 +434,38 @@ document.addEventListener('click', (e) => {
   if (!e.target.closest('.search-wrap')) hideSuggest();
 });
 
-/* ================= Pin detail modal ================= */
-function openPinModal(pin, src) {
+/* ================= Pin detail modal (premium closeup) ================= */
+let pmIndex = -1;
+let pmSource = '';
+
+function pmMetaCard(icon, key, val) {
+  return `<div class="pm-meta"><span class="pm-k">${icon} ${key}</span><span class="pm-v">${escapeHtml(String(val ?? '—'))}</span></div>`;
+}
+
+function showPinAt(index) {
+  const pins = window._lastPins || lastPins || [];
+  if (!pins.length) return;
+  pmIndex = ((index % pins.length) + pins.length) % pins.length;
+  const pin = pins[pmIndex];
   const t = I18N[settings.lang] || I18N.en;
-  $('pm-img').src = src || pin.image_url || '';
+  const src = pin.local_file ? `/api/images/${encodeURIComponent(pin.local_file)}` : (pin.image_url || '');
+  pmSource = src;
+  const img = $('pm-img');
+  img.classList.remove('pm-anim');
+  img.src = src;
+  void img.offsetWidth;
+  img.style.animation = 'none'; void img.offsetWidth; img.style.animation = '';
+  $('pm-blur').style.backgroundImage = `url("${src}")`;
   $('pm-title').textContent = pin.title || pin.pin_id;
   $('pm-desc').textContent = pin.description || '';
-  const rows = [
-    ['📌', t.pins, fmtNum(pin.saves)],
-    ['💬', 'Comments', fmtNum(pin.comments)],
-    ['👤', 'Creator', pin.creator ? `@${pin.creator.username}` : '—'],
-    ['📋', 'Board', pin.board ? pin.board.name : '—'],
-    ['📐', 'Size', pin.width ? `${pin.width}×${pin.height}` : '—'],
-    ['📅', 'Date', (pin.created_at || '').slice(0, 10) || '—'],
-  ];
-  $('pm-table').innerHTML = rows.map(r =>
-    `<tr><td>${r[0]} ${r[1]}</td><td>${escapeHtml(String(r[2] || '—'))}</td></tr>`).join('');
+  $('pm-table').innerHTML = [
+    pmMetaCard('📌', t.pins, fmtNum(pin.saves)),
+    pmMetaCard('💬', 'Comments', fmtNum(pin.comments)),
+    pmMetaCard('👤', 'Creator', pin.creator ? '@' + pin.creator.username : '—'),
+    pmMetaCard('📋', 'Board', pin.board ? pin.board.name : '—'),
+    pmMetaCard('📐', 'Size', pin.width ? `${pin.width}×${pin.height}` : '—'),
+    pmMetaCard('📅', 'Date', (pin.created_at || '').slice(0, 10) || '—'),
+  ].join('');
   const colors = $('pm-colors');
   colors.innerHTML = '';
   if (pin.dominant_color) {
@@ -464,12 +480,32 @@ function openPinModal(pin, src) {
   $('pm-download').download = `pin_${pin.pin_id}.jpg`;
   $('pm-pin-link').href = pin.pin_url || '#';
   $('pm-visual').onclick = () => runVisualSearch(pin.pin_id);
+}
+
+function openPinModal(pin, src) {
+  const pins = window._lastPins || lastPins || [];
+  pmIndex = Math.max(0, pins.findIndex(p => p.pin_id === pin.pin_id));
+  showPinAt(pmIndex);
   $('pin-modal').classList.remove('hidden');
 }
-function closePinModal() { $('pin-modal').classList.add('hidden'); }
+function closePinModal() {
+  const m = $('pin-modal');
+  m.classList.add('closing');
+  setTimeout(() => { m.classList.add('hidden'); m.classList.remove('closing'); }, 180);
+}
+function pmNav(dir) { showPinAt(pmIndex + dir); }
 $('close-pin-modal').addEventListener('click', closePinModal);
+$('pm-prev').addEventListener('click', () => pmNav(-1));
+$('pm-next').addEventListener('click', () => pmNav(1));
+$('pm-prev-in').addEventListener('click', (e) => { e.stopPropagation(); pmNav(-1); });
+$('pm-next-in').addEventListener('click', (e) => { e.stopPropagation(); pmNav(1); });
 $('pin-modal').addEventListener('click', (e) => { if (e.target.id === 'pin-modal') closePinModal(); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePinModal(); });
+document.addEventListener('keydown', (e) => {
+  if ($('pin-modal').classList.contains('hidden')) return;
+  if (e.key === 'Escape') closePinModal();
+  if (e.key === 'ArrowLeft') pmNav(-1);
+  if (e.key === 'ArrowRight') pmNav(1);
+});
 
 /* ================= Visual search ================= */
 async function runVisualSearch(pinId) {
