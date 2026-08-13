@@ -3,6 +3,9 @@
 
 /* ---------------- i18n ---------------- */
 const I18N = {
+  phCollect: {en: "Collect", fa: "جمع‌آوری"},
+  phDetails: {en: "Details", fa: "جزئیات"},
+  phDownload: {en: "Download", fa: "دانلود"},
   boardTip: {en: "Paste a Pinterest board URL (pinterest.com/...) to scrape it", fa: "لینک کامل بورد پینترست را وارد کنید"},
   optInsights: {en: "Show insights chart", fa: "نمایش نمودار تحلیلی"},
   clearRuns: {en: "🗑 Clear past runs list", fa: "🗑 پاک کردن لیست اجراها"},
@@ -192,9 +195,14 @@ function handleEvent(ev, es) {
     els_queries_done(ev);
   } else if (ev.event === 'phase') {
     const labels = { collect: t.collecting, details: t.details, download: t.downloading };
-    showProgress(labels[ev.phase] || ev.phase, ev.phase === 'collect');
+    if (currentPhase && phaseState[currentPhase]) phaseState[currentPhase].done = true;
+    currentPhase = ev.phase;
+    phaseState[ev.phase] = { count: 0, total: ev.total || 0, done: false };
+    showProgress(labels[ev.phase] || ev.phase, ev.phase === 'collect' && !ev.total);
+    updatePhaseUI();
   } else if (ev.event === 'progress') {
-    setProgress(ev.count, ev.total);
+    if (ev.phase) currentPhase = ev.phase;
+    setProgress(ev.count, ev.total || 0);
   } else if (ev.event === 'dedup') {
     appendMeta(`· ${t.dupes}: ${ev.duplicates}`);
   } else if (ev.event === 'nothing_new') {
@@ -225,7 +233,7 @@ async function finishJob(ev) {
       showError(t2.noResults || 'No results found for this query.');
     }
   }
-  renderGrid(lastPins);
+  resetFeed(lastPins);
   renderChart();
   if (currentJob && hasImages) {
     $('exp-zip').href = `/api/jobs/${currentJob}/export/zip`;
@@ -239,22 +247,51 @@ async function finishJob(ev) {
 }
 
 /* ---------------- progress UI ---------------- */
+const phaseOrder = ['collect', 'details', 'download'];
+const phaseState = {};
+let currentPhase = null;
+
 function showProgress(title, indeterminate) {
-  $('progress-card').classList.remove('hidden');
+  const card = $('progress-card');
+  card.classList.remove('hidden');
   $('progress-title').textContent = title;
-  const bar = $('progress-bar');
-  bar.classList.toggle('indeterminate', !!indeterminate);
-  if (indeterminate) bar.style.width = '40%';
-  $('progress-meta').textContent = '';
+  $('progress-bar').classList.toggle('indeterminate', !!indeterminate);
+  document.querySelectorAll('.phase-chip').forEach(ch => ch.classList.remove('active', 'done'));
+  phaseOrder.forEach(p => delete phaseState[p]);
+  currentPhase = null;
+  setProgress(0, 0, true);
+  applyI18n();
 }
-function setProgress(count, total) {
-  const bar = $('progress-bar');
-  bar.classList.remove('indeterminate');
-  const t = I18N[settings.lang] || I18N.en;
-  if (total) bar.style.width = `${Math.min(100, (count / total) * 100)}%`;
-  $('progress-title').textContent = `${$('progress-title').textContent.split('·')[0].trim()}`;
-  $('progress-meta').textContent = `${count} / ${total || '?'} ${t.pins}`;
+
+function updatePhaseUI() {
+  document.querySelectorAll('.phase-chip').forEach(ch => {
+    const p = ch.dataset.phase;
+    ch.classList.toggle('active', p === currentPhase);
+    ch.classList.toggle('done', phaseState[p] && phaseState[p].done);
+  });
+  const st = phaseState[currentPhase];
+  let pct = 0;
+  if (st && st.total > 0) pct = Math.min(100, Math.round(st.count / st.total * 100));
+  $('progress-bar').style.width = pct + '%';
+  $('progress-pct').textContent = pct + '%';
+  const bits = [];
+  phaseOrder.forEach(p => {
+    const s = phaseState[p];
+    if (s && s.total > 0) bits.push(`${p}: ${s.count}/${s.total}`);
+  });
+  $('progress-meta').textContent = bits.join('  ·  ');
 }
+
+function setProgress(count, total, reset) {
+  if (currentPhase) {
+    phaseState[currentPhase] = {
+      count, total,
+      done: total > 0 && count >= total,
+    };
+  }
+  updatePhaseUI();
+}
+
 function appendMeta(text) {
   $('progress-meta').textContent = `${$('progress-meta').textContent} ${text}`.trim();
 }
@@ -279,11 +316,13 @@ function fmtNum(n) {
   return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n);
 }
 
-function renderGrid(pins) {
+function renderGrid(pins, incremental) {
   const grid = $('grid');
-  grid.innerHTML = '';
+  if (!incremental) grid.innerHTML = '';
+  const start = incremental ? grid.querySelectorAll('.pin-card').length : 0;
   $('empty').classList.toggle('hidden', pins.length > 0);
-  pins.forEach((pin, i) => {
+  pins.slice(incremental ? grid.querySelectorAll('.pin-card').length : 0).forEach((pin, k) => {
+    const i = start + k;
     const img = pin.image_url || '';
     const local = pin.local_file
       ? `/api/images/${encodeURIComponent(pin.local_file)}` : '';
@@ -524,7 +563,7 @@ async function runVisualSearch(pinId) {
     $('stats-card').classList.remove('hidden');
     $('export-bar').classList.add('hidden');
     $('chart-card').classList.add('hidden');
-    renderGrid(lastPins);
+    resetFeed(lastPins);
   } catch {
     $('progress-card').classList.add('hidden');
     showError('visual search failed');
@@ -579,7 +618,7 @@ async function openRun(jobId) {
   $('export-bar').classList.toggle('hidden', !lastPins.some(p => p.local_file));
   $('chart-card').classList.remove('hidden');
   renderChart();
-  renderGrid(lastPins);
+  resetFeed(lastPins);
   openHistory(false);
 }
 function openHistory(open) {
@@ -596,40 +635,7 @@ $('clear-runs').addEventListener('click', async () => {
 });
 $('close-history').addEventListener('click', () => openHistory(false));
 
-async function loadSchedules() {
-  const list = $('schedule-list');
-  const t = I18N[settings.lang] || I18N.en;
-  try {
-    const { schedules } = await (await fetch('/api/schedules')).json();
-    if (!schedules.length) { list.innerHTML = `<p class="pm-desc">${t.noSchedules}</p>`; return; }
-    list.innerHTML = '';
-    schedules.forEach(s => {
-      const item = document.createElement('div');
-      item.className = 'sch-item';
-      item.innerHTML = `
-        <div><div class="sch-q">${escapeHtml(s.query)}</div>
-        <div class="sch-meta">⏱ ${s.interval_hours}h · ${s.limit} 📌 · ×${s.runs}</div></div>
-        <button class="icon-btn" title="delete">🗑</button>`;
-      item.querySelector('button').onclick = async () => {
-        await fetch(`/api/schedules/${s.id}`, { method: 'DELETE' });
-        loadSchedules();
-      };
-      list.appendChild(item);
-    });
-  } catch { /* ignore */ }
-}
-$('sch-add').addEventListener('click', async () => {
-  const q = $('sch-query').value.trim();
-  if (!q) return;
-  await fetch('/api/schedules', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query: q, mode: settings.mode,
-      interval_hours: Number($('sch-hours').value) || 24,
-      limit: Number($('sch-limit').value) || 25 }),
-  });
-  $('sch-query').value = '';
-  loadSchedules();
-});
+
 
 /* ================= Analytics chart ================= */
 function renderChart() {
@@ -823,3 +829,37 @@ renderGrid = function (pins) {
   pins.forEach((p, i) => { if (cards[i]) cards[i]._pin = p; });
   if (selectionMode) document.querySelectorAll('.pin-card').forEach(c => c.classList.add('selectable'));
 };
+
+
+/* ================= Infinite scroll ================= */
+const PAGE_SIZE = 25;
+let allPins = [];
+let renderedCount = 0;
+let loadingMore = false;
+
+function resetFeed(pins) {
+  allPins = pins || [];
+  renderedCount = 0;
+  renderGrid(allPins.slice(0, PAGE_SIZE));
+  renderedCount = Math.min(PAGE_SIZE, allPins.length);
+}
+
+async function loadMore() {
+  if (loadingMore || renderedCount >= allPins.length) return;
+  loadingMore = true;
+  const next = allPins.slice(renderedCount, renderedCount + PAGE_SIZE);
+  if (next.length && next[0].pin_id && !next[0].image_url) {
+    // results come in one shot from backend; just append
+  }
+  renderGrid(allPins, true);
+  renderedCount += next.length;
+  loadingMore = false;
+}
+
+const _io = new IntersectionObserver((entries) => {
+  if (entries[0].isIntersecting) loadMore();
+}, { rootMargin: '600px' });
+const _sentinel = document.getElementById('scroll-sentinel');
+if (_sentinel) _io.observe(_sentinel);
+
+// hook: whenever a full result set arrives, feed it through the pager

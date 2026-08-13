@@ -117,7 +117,9 @@ class Job:
                                delay=req.delay, save_cb=batch_save,
                                batch_size=req.batch_size, jitter=req.jitter)
 
-        self.emit(event="phase", phase="collect", message="Collecting pins")
+        collect_total = req.limit * len(queries)
+        self.emit(event="phase", phase="collect", total=collect_total,
+                  message="Collecting pins")
 
         def batch_save(partial: list[dict]) -> None:
             self._check_cancel()
@@ -126,7 +128,8 @@ class Job:
             if store:
                 new = store.filter(new)
             self.pins.extend(new)
-            self.emit(event="progress", phase="collect", count=len(self.pins))
+            self.emit(event="progress", phase="collect", count=len(self.pins),
+                      total=collect_total)
             save_outputs(self.pins, self.out_dir, stem)  # batch-safe on-disk save
 
         existing_ids = {p["pin_id"] for p in self.pins}
@@ -151,15 +154,29 @@ class Job:
 
         if req.details:
             self.emit(event="phase", phase="details", total=len(pins))
+            done = {"n": 0}
+
+            def _detail_cb(n):
+                done["n"] = max(done["n"], n)
+                self.emit(event="progress", phase="details",
+                          count=done["n"], total=len(pins))
+
             enrich_with_details(session, pins, delay=req.delay,
-                                workers=req.workers, jitter=req.jitter)
+                                workers=req.workers, jitter=req.jitter,
+                                progress_cb=_detail_cb)
             self._check_cancel()
 
         if req.download:
             self.emit(event="phase", phase="download", total=len(pins))
             from ..downloader import download_all
+
+            def _dl_cb(n):
+                self.emit(event="progress", phase="download",
+                          count=n, total=len(pins))
+
             self.stats = download_all(session, pins, self.out_dir / "images",
-                                      req.workers, req.min_width, req.min_height)
+                                      req.workers, req.min_width, req.min_height,
+                                      progress_cb=_dl_cb)
             self._check_cancel()
 
         summary = save_outputs(pins, self.out_dir, stem)
