@@ -260,7 +260,7 @@ function showProgress(title, indeterminate) {
   phaseOrder.forEach(p => delete phaseState[p]);
   currentPhase = null;
   setProgress(0, 0, true);
-  applyI18n();
+  applyLang();
 }
 
 function updatePhaseUI() {
