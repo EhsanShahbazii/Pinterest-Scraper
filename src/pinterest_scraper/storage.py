@@ -23,10 +23,12 @@ def save_outputs(pins: list[dict], out_dir: Path, stem: str) -> dict:
     merged: dict[str, dict] = {}
     if json_path.exists():
         try:
-            for old in json.loads(json_path.read_text()):
-                if old.get("pin_id"):
-                    merged[str(old["pin_id"])] = old
-        except ValueError:
+            content = json.loads(json_path.read_text(encoding="utf-8"))
+            if isinstance(content, list):
+                for old in content:
+                    if isinstance(old, dict) and old.get("pin_id"):
+                        merged[str(old["pin_id"])] = old
+        except (ValueError, OSError, TypeError):
             console.print("[yellow]! existing JSON unreadable — overwriting[/]")
     for pin in pins:
         if pin.get("pin_id"):

@@ -60,12 +60,24 @@ def extract_pin(raw: dict) -> dict | None:
         return None
 
     agg = _dig(raw, "aggregated_pin_data", default={}) or {}
+    if not isinstance(agg, dict):
+        agg = {}
     creator = raw.get("creator") or raw.get("pinner") or {}
+    if not isinstance(creator, dict):
+        creator = {}
     board = raw.get("board") or {}
+    if not isinstance(board, dict):
+        board = {}
     pin_id = str(raw["id"])
 
-    width = (orig or {}).get("width") or raw.get("image_width") or 0
-    height = (orig or {}).get("height") or raw.get("image_height") or 0
+    try:
+        width = int((orig or {}).get("width") or raw.get("image_width") or 0)
+    except (ValueError, TypeError):
+        width = 0
+    try:
+        height = int((orig or {}).get("height") or raw.get("image_height") or 0)
+    except (ValueError, TypeError):
+        height = 0
 
     return {
         "pin_id": pin_id,
@@ -207,17 +219,20 @@ def board_pins(session: requests.Session, board_url: str, limit: int,
     """
     import re
 
-    m = re.match(r"(?:https?://[^/]+)?/([^/]+)/([^/]+)/?", board_url.strip())
+    url = board_url.strip()
+    if not url.startswith(("http://", "https://", "/")):
+        url = "https://" + url
+    m = re.search(r"(?:https?://[^/]+)?/([^/]+)/([^/]+)/?", url)
     if not m:
-        raise SystemExit(f"Could not parse board URL: {board_url}")
+        raise ValueError(f"Could not parse board URL: {board_url}")
     username, slug = m.group(1), m.group(2)
 
     options = {"username": username, "slug": slug, "field_set_key": "detailed"}
-    board, _ = api_data(session, BOARD_URL, options, board_url,
+    board, _ = api_data(session, BOARD_URL, options, url,
                         handler=f"www/board/{username}/{slug}.js")
     board_id = (board or {}).get("id")
     if not board_id:
-        raise SystemExit("Could not resolve board id — check the URL (must be a board).")
+        raise ValueError("Could not resolve board id — check the URL (must be a board).")
     from .ui import console
     console.print(f"  board: [bold]{(board or {}).get('name')}[/] (id {board_id})")
 
@@ -329,10 +344,16 @@ def related_pins(session: requests.Session, pin_id: str, limit: int = 25) -> lis
                        handler="www/pin/[id].js")
     out: list[dict] = []
     seen: set[str] = set()
-    for module in data if isinstance(data, list) else []:
-        if module.get("type") != "pin" or not isinstance(module, dict):
+    items = data
+    if isinstance(data, dict):
+        items = data.get("results") or data.get("items") or data.get("pins") or []
+    for module in items if isinstance(items, list) else []:
+        if not isinstance(module, dict):
             continue
-        pin = extract_pin(module)
+        raw_pin = module.get("pin") if isinstance(module.get("pin"), dict) else module
+        if raw_pin.get("type") not in (None, "pin"):
+            continue
+        pin = extract_pin(raw_pin)
         if pin and pin["pin_id"] not in seen:
             seen.add(pin["pin_id"])
             out.append(pin)
