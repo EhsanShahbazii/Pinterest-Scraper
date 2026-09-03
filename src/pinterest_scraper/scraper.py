@@ -99,3 +99,98 @@ def extract_pin(raw: dict) -> dict | None:
         "video_url": video_url or "",
         "local_file": "",
     }
+
+
+def search_pins(session: requests.Session, query: str, limit: int,
+                delay: float = 1.0, save_cb=None, batch_size: int = 10,
+                jitter: float = 0.5) -> list[dict]:
+    """Search pins by keyword, paginating with bookmark cursors.
+
+    save_cb(pins) is called every batch_size new items (incremental save).
+    """
+    pins, seen, bookmark = [], set(), None
+    page, saved_count = 1, 0
+    prog, task = make_progress(f"[cyan]Searching '{query}'", limit)
+    with prog:
+        while len(pins) < limit:
+            options = {
+                "query": query,
+                "scope": "pins",
+                "page_size": 25,
+                "bookmarks": [bookmark] if bookmark else [],
+                "redux_normalize_feed": True,
+                "no_fetch_context_on_feed": False,
+            }
+            prog.update(task, description=f"[cyan]Search page {page}")
+            data, bookmark = api_data(session, SEARCH_URL, options,
+                                      f"/search/pins/?q={quote(query)}",
+                                      handler="www/search/[scope].js")
+            if not data:
+                break
+            items = data.get("results") if isinstance(data, dict) else data
+            for raw in (items or []):
+                pin = extract_pin(raw)
+                if pin and pin["pin_id"] not in seen:
+                    seen.add(pin["pin_id"])
+                    pins.append(pin)
+                    prog.update(task, advance=1)
+                    if len(pins) >= limit:
+                        break
+            page += 1
+            if save_cb:
+                while len(pins) - saved_count >= batch_size:
+                    save_cb(pins[:saved_count + batch_size])
+                    saved_count += batch_size
+            if not bookmark:
+                break
+            polite_sleep(delay, jitter)
+        prog.update(task, description="[green]Search done")
+    if save_cb and len(pins) > saved_count:
+        save_cb(pins)
+    return pins[:limit]
+
+
+def get_pin_details(session: requests.Session, pin_id: str) -> dict | None:
+    """Fetch a single pin's full detail object."""
+    options = {"id": pin_id, "field_set_key": "detailed",
+               "fetch_visual_search_objects": False}
+    data, _ = api_data(session, PIN_URL, options, f"/pin/{pin_id}/",
+                       handler="www/pin/[id].js")
+    return data if isinstance(data, dict) else None
+
+
+def enrich_pin(session: requests.Session, pin: dict) -> dict | None:
+    """Fetch fresh details for one pin; returns updated pin or None."""
+    raw = get_pin_details(session, pin["pin_id"])
+    if not raw:
+        return None
+    fresh = extract_pin(raw)
+    if fresh:
+        fresh["local_file"] = pin.get("local_file", "")
+        return fresh
+    return None
+
+
+def enrich_with_details(session: requests.Session, pins: list[dict],
+                        delay: float = 1.0, workers: int = 1,
+                        jitter: float = 0.5) -> None:
+    """Refresh stats (saves/likes/comments) via PinResource, concurrently."""
+    prog, task = make_progress("[magenta]Fetching pin details", len(pins))
+    with prog:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
+            futs = {pool.submit(enrich_pin, session, pin): i
+                    for i, pin in enumerate(pins)}
+            for fut in concurrent.futures.as_completed(futs):
+                i = futs[fut]
+                prog.update(task, description=f"[magenta]Details: pin {pins[i]['pin_id']}")
+                try:
+                    fresh = fut.result()
+                except Exception as e:  # noqa: BLE001
+                    err_console.print(f"  pin {pins[i]['pin_id']}: {e}")
+                    fresh = None
+                if fresh:
+                    pins[i] = fresh
+                else:
+                    err_console.print(f"  pin {pins[i]['pin_id']}: details unavailable")
+                prog.update(task, advance=1)
+                polite_sleep(delay / max(1, workers), jitter)
