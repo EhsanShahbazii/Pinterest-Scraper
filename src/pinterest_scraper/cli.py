@@ -68,3 +68,58 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("interactive", help="guided interactive mode (default)")
     return p
+
+
+def ask(prompt: str, default=""):
+    val = input(f"{prompt} [{default}]: ").strip()
+    return val or default
+
+
+def ask_bool(prompt: str, default: bool = False) -> bool:
+    d = "Y/n" if default else "y/N"
+    return input(f"{prompt} [{d}]: ").strip().lower() in ("y", "yes", "") if default \
+        else input(f"{prompt} [{d}]: ").strip().lower() in ("y", "yes")
+
+
+def ask_int(prompt: str, default: int) -> int:
+    try:
+        return int(ask(prompt, str(default)))
+    except ValueError:
+        return default
+
+
+def interactive() -> argparse.Namespace:
+    """Guided wizard that builds the same args as the CLI flags."""
+    console.print("[bold magenta]🎨 Pinterest Scraper — Interactive Mode[/]")
+    console.print("[dim]Press Enter to accept the [default] value.\n[/]")
+
+    console.print("[bold]What do you want to scrape?[/]")
+    console.print("  [cyan]1.[/] Keyword search  (e.g. 'taylor swift')")
+    console.print("  [cyan]2.[/] A board URL      (e.g. .../user/board-name/)")
+    console.print("  [cyan]3.[/] Specific pin(s)  (IDs or URLs)")
+    choice = ask("Choose 1/2/3", "1")
+
+    mode = {"1": "search", "2": "board", "3": "pin"}.get(choice, "search")
+    ns = build_parser().parse_args([mode])
+
+    if mode == "search":
+        ns.query = ask("Keyword to search", "taylor swift")
+    elif mode == "board":
+        ns.url = ask("Board URL", "https://www.pinterest.com/SanSwift12/your-voice-can-calm-the-ocean/")
+    else:
+        refs = ask("Pin ID(s)/URL(s), comma-separated", "").split(",")
+        ns.pins = [r.strip() for r in refs if r.strip()]
+
+    ns.limit = ask_int("Max pins", 25)
+    ns.download = ask_bool("Download images?", True)
+    ns.details = ask_bool("Fetch full details (accurate saves/comments)?", False)
+    ns.min_width = ask_int("Minimum image width (0 = any)", 0)
+    ns.min_height = ask_int("Minimum image height (0 = any)", 0)
+    ns.workers = ask_int("Concurrent workers", 4)
+    ns.delay = float(ask("Delay between API pages (seconds)", "1.0"))
+    ns.jitter = float(ask("Random jitter on delays (seconds)", "0.5"))
+    ns.batch_size = ask_int("Save metadata every N items", 10)
+    ns.out = ask("Output directory", "output")
+    ns.proxy = ask("Proxy or comma-separated proxies (blank = none)", "")
+    ns.no_dedup = not ask_bool("Skip already-seen pins (dedup)?", True)
+    return ns
