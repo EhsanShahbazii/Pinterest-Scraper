@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+output/
+demo_output/
+test_output/
+.seen_pins.json
+.DS_Store
