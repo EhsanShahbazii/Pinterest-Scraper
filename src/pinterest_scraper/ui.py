@@ -7,8 +7,8 @@ import sys
 from rich import box
 from rich.console import Console
 from rich.panel import Panel
-from rich.progress import (BarColumn, MofNCompleteColumn, SpinnerColumn,
-                           TextColumn, TimeElapsedColumn)
+from rich.progress import (BarColumn, MofNCompleteColumn, Progress,
+                           SpinnerColumn, TextColumn, TimeElapsedColumn)
 from rich.table import Table
 
 console = Console()
