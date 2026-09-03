@@ -177,7 +177,7 @@ def run(args: argparse.Namespace) -> None:
     if not pins:
         if dedupe.dup_pins and not args.no_dedup:
             console.print("[green]Nothing new to collect — you already have all "
-                          "these pins. :)[/"]"
+                          "these pins. :)[/]")
         else:
             console.print("[red]No pins collected — Pinterest may be rate-limiting. "
                           "Try a bigger --delay.[/]")
