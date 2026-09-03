@@ -54,55 +54,53 @@ never loses work.
 
 ## 📸 Screenshots
 
-> Drop your screenshots into [`docs/screenshots/`](docs/screenshots/) using
-> the exact filenames below and they will appear here automatically.
-
 ### 🌐 Web App
 
 
-**v1.2 power features:**
-- 🌙 **Dark mode** (auto-detects system theme, smooth transitions) · 🇬🇧/🇮🇷 EN/FA · localStorage persistence
-- 🔍 **Live suggestions** with real user avatars (350 ms debounce, cached)
-- 📦 **Batch mode** — `taylor swift, dua lipa, ariana grande` in one job
-- 🖼 **Pin detail modal** — full metadata, color chips, original download
-- 🔮 **Visual search** — "More like this" finds visually similar pins from any card
-- 🗂 **History / mini-DAM** — browse & re-open past runs from the sidebar
-- ⬇ **Exports** — ZIP of images + XLSX spreadsheet for any job or run
-- ⏰ **Scheduler** — recurring scrapes (e.g. every 24 h) with auto-dedup, growing trend dataset
-- 📊 **Insights chart** — top pins by saves (Chart.js), skeleton loaders, recent-search chips
+**v1.3 power features:**
+- ↔️ **Full-width edge-to-edge layout** — toggle between contained and wide Pinterest-style responsive grid
+- 🖼 **Local Gallery DAM** — browse saved pins, long-press to multi-select, and bulk delete with real-time badge updates
+- 🔍 **Live suggestions** with real user avatars & verified badges (debounced typeahead)
+- 📌 **Pinterest-style detail modal** — high-res closeup, creator metadata, metric badges, dominant color palette, keyboard navigation
+- 🌙 **Dark mode & modern SVG icons** — automatic system detection, clean vector iconography with zero emojis
+- 💾 **Instant localStorage persistence** — settings drawer, dark/light theme, and wide layout persist seamlessly
+- 🇮🇷/🇬🇧 **Bilingual English & Persian** — full RTL layout with Vazirmatn typography
+- 🔮 **Visual search** — "More like this" finds visually similar pins directly from any pin
+- ⬇️ **Direct exports** — one-click ZIP download of images and XLSX metadata spreadsheets
+- 📊 **Engagement analytics** — interactive Chart.js bar chart for saves and engagement metrics
 
-<!-- Row 1: web app -->
+<!-- Row 1: Main search results -->
 <p align="center">
-  <img src="docs/screenshots/web-home.png" alt="Web app — home & search" width="85%">
+  <img src="docs/screenshots/2.png" alt="Web app — results & summary" width="95%">
 </p>
 <p align="center">
-  <em>Web app — Pinterest-styled home with search bar and mode chips.</em>
+  <em>Results — Pinterest-styled search view with live stats summary and responsive masonry grid.</em>
 </p>
 
-<!-- Row 2: results grid + settings side by side -->
+<!-- Row 2: Closeup Modal & Gallery DAM -->
 <p align="center">
   <table>
     <tr>
-      <td align="center"><img src="docs/screenshots/web-results.png" alt="Web app — results masonry grid" width="100%"></td>
-      <td align="center"><img src="docs/screenshots/web-settings.png" alt="Web app — settings drawer" width="100%"></td>
+      <td align="center"><img src="docs/screenshots/4.png" alt="Pin detail modal" width="100%"></td>
+      <td align="center"><img src="docs/screenshots/3.png" alt="Gallery DAM & multi-select deletion" width="100%"></td>
     </tr>
     <tr>
-      <td align="center"><em>Results — masonry grid of original-quality pins</em></td>
-      <td align="center"><em>Settings drawer — full control over everything</em></td>
+      <td align="center"><em>Closeup modal — high-res image, creator info, metrics & palette</em></td>
+      <td align="center"><em>Gallery DAM — local images with hold-to-select bulk deletion</em></td>
     </tr>
   </table>
 </p>
 
-<!-- Row 3: farsi / progress -->
+<!-- Row 3: Live typeahead & Persian settings drawer -->
 <p align="center">
   <table>
     <tr>
-      <td align="center"><img src="docs/screenshots/web-farsi.png" alt="Web app — Persian RTL interface" width="100%"></td>
-      <td align="center"><img src="docs/screenshots/web-progress.png" alt="Web app — live progress" width="100%"></td>
+      <td align="center"><img src="docs/screenshots/1.png" alt="Live typeahead search suggestions" width="100%"></td>
+      <td align="center"><img src="docs/screenshots/5.png" alt="Settings drawer in Persian RTL mode" width="100%"></td>
     </tr>
     <tr>
-      <td align="center"><em>فارسی — full RTL with the Vazirmatn font</em></td>
-      <td align="center"><em>Live progress — collecting → details → downloading</em></td>
+      <td align="center"><em>Live suggestions — real-time typeahead with creator avatars</em></td>
+      <td align="center"><em>Settings drawer — Persian RTL with Vazirmatn font & full controls</em></td>
     </tr>
   </table>
 </p>
@@ -112,8 +110,8 @@ never loses work.
 <p align="center">
   <table>
     <tr>
-      <td align="center"><img src="docs/screenshots/cli-banner.png" alt="CLI — banner & wizard" width="100%"></td>
-      <td align="center"><img src="docs/screenshots/cli-results.png" alt="CLI — progress & results table" width="100%"></td>
+      <td align="center"><img src="docs/screenshots/6.png" alt="CLI — banner & wizard" width="100%"></td>
+      <td align="center"><img src="docs/screenshots/7.png" alt="CLI — progress & results table" width="100%"></td>
     </tr>
     <tr>
       <td align="center"><em>Interactive wizard</em></td>
