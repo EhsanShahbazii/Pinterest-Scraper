@@ -194,3 +194,62 @@ def enrich_with_details(session: requests.Session, pins: list[dict],
                     err_console.print(f"  pin {pins[i]['pin_id']}: details unavailable")
                 prog.update(task, advance=1)
                 polite_sleep(delay / max(1, workers), jitter)
+
+
+def board_pins(session: requests.Session, board_url: str, limit: int,
+               delay: float = 1.0, save_cb=None, batch_size: int = 10,
+               jitter: float = 0.5) -> list[dict]:
+    """Scrape a board (https://www.pinterest.com/<user>/<slug>/).
+
+    save_cb(pins) is called every batch_size new items (incremental save).
+    """
+    import re
+
+    m = re.match(r"(?:https?://[^/]+)?/([^/]+)/([^/]+)/?", board_url.strip())
+    if not m:
+        raise SystemExit(f"Could not parse board URL: {board_url}")
+    username, slug = m.group(1), m.group(2)
+
+    options = {"username": username, "slug": slug, "field_set_key": "detailed"}
+    board, _ = api_data(session, BOARD_URL, options, board_url,
+                        handler=f"www/board/{username}/{slug}.js")
+    board_id = (board or {}).get("id")
+    if not board_id:
+        raise SystemExit("Could not resolve board id — check the URL (must be a board).")
+    from .ui import console
+    console.print(f"  board: [bold]{(board or {}).get('name')}[/] (id {board_id})")
+
+    pins, seen, bookmark = [], set(), None
+    page, saved_count = 1, 0
+    prog, task = make_progress("[cyan]Board feed", limit)
+    with prog:
+        while len(pins) < limit:
+            options = {"board_id": board_id, "page_size": 25,
+                       "bookmarks": [bookmark] if bookmark else [],
+                       "redux_normalize_feed": True}
+            prog.update(task, description=f"[cyan]Board feed page {page}")
+            data, bookmark = api_data(session, BOARD_FEED_URL, options, board_url,
+                                      handler=f"www/board/{username}/{slug}.js")
+            if not data:
+                break
+            items = data.get("results") if isinstance(data, dict) else data
+            for raw in (items or []):
+                pin = extract_pin(raw)
+                if pin and pin["pin_id"] not in seen:
+                    seen.add(pin["pin_id"])
+                    pins.append(pin)
+                    prog.update(task, advance=1)
+                    if len(pins) >= limit:
+                        break
+            page += 1
+            if save_cb:
+                while len(pins) - saved_count >= batch_size:
+                    save_cb(pins[:saved_count + batch_size])
+                    saved_count += batch_size
+            if not bookmark:
+                break
+            polite_sleep(delay, jitter)
+        prog.update(task, description="[green]Board done")
+    if save_cb and len(pins) > saved_count:
+        save_cb(pins)
+    return pins[:limit]
