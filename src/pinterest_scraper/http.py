@@ -9,7 +9,7 @@ import time
 
 import requests
 
-from .config import BASE
+from .config import BASE, USER_AGENTS
 from .ui import err_console
 
 
@@ -36,7 +36,7 @@ def build_session(proxy_pool: list[str] | None = None) -> requests.Session:
     """Session with browser-like headers; warm up once to collect cookies."""
     s = requests.Session()
     s.headers.update({
-        "User-Agent": random.choice(__import__("pinterest_scraper.config", fromlist=["USER_AGENTS"]).USER_AGENTS),
+        "User-Agent": random.choice(USER_AGENTS),
         "Accept": "application/json, text/javascript, */*, q=0.01",
         "Accept-Language": "en-US,en;q=0.9",
         "X-Requested-With": "XMLHttpRequest",
