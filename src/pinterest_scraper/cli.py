@@ -56,15 +56,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     s1 = sub.add_parser("search", help="search by keyword, e.g. 'taylor swift'")
     common(s1)
-    s1.add_argument("query")
+    s1.add_argument("query", nargs="?", default="")
 
     s2 = sub.add_parser("pin", help="one or more pin URLs/IDs")
     common(s2)
-    s2.add_argument("pins", nargs="+")
+    s2.add_argument("pins", nargs="*", default=[])
 
     s3 = sub.add_parser("board", help="a board URL, e.g. .../user/board-name/")
     common(s3)
-    s3.add_argument("url")
+    s3.add_argument("url", nargs="?", default="")
 
     sub.add_parser("interactive", help="guided interactive mode (default)")
     return p
@@ -127,6 +127,12 @@ def interactive() -> argparse.Namespace:
 
 def run(args: argparse.Namespace) -> None:
     """Execute one scraping run for the parsed args."""
+    missing = ((args.mode == "search" and not getattr(args, "query", ""))
+               or (args.mode == "board" and not getattr(args, "url", ""))
+               or (args.mode == "pin" and not getattr(args, "pins", [])))
+    if missing:
+        die(f"mode '{args.mode}' needs a target: query / board URL / pin IDs "
+            f"(or use 'pinterest-scraper interactive').")
     out_dir = Path(args.out)
     dedupe = DedupeStore(out_dir / ".seen_pins.json",
                          enabled=not args.no_dedup, scan_dir=out_dir)
