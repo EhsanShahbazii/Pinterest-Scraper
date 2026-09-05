@@ -26,7 +26,16 @@
   </form>
 
   <div class="top-actions">
-    <button id="theme-btn" class="icon-btn" title="Theme" aria-label="Theme"><span id="theme-icon">🌙</span></button>
+    <button id="layout-btn" class="icon-btn" title="Full width" aria-label="Toggle layout">
+      <span id="layout-icon">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+      </span>
+    </button>
+    <button id="theme-btn" class="icon-btn" title="Theme" aria-label="Theme">
+      <span id="theme-icon">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+      </span>
+    </button>
     <button id="lang-btn" class="icon-btn" title="Language / زبان"><span id="lang-label">فا</span></button>
     <button id="settings-btn" class="icon-btn" title="Settings" aria-label="Settings">
       <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19.4 13c.04-.32.06-.65.06-1s-.02-.68-.06-1l2.1-1.65a.5.5 0 00.12-.64l-2-3.46a.5.5 0 00-.6-.22l-2.5 1a7.7 7.7 0 00-1.7-1L14.5 2.4A.5.5 0 0014 2h-4a.5.5 0 00-.5.4l-.37 2.65c-.62.26-1.17.6-1.7 1l-2.5-1a.5.5 0 00-.6.22l-2 3.46a.5.5 0 00.12.64L4.55 11c-.04.32-.06.65-.06 1s.02.68.06 1l-2.1 1.65a.5.5 0 00-.12.64l2 3.46c.13.22.39.31.6.22l2.5-1c.53.4 1.08.74 1.7 1l.37 2.65c.04.24.25.4.5.4h4c.25 0 .46-.16.5-.4l.37-2.65c.62-.26 1.17-.6 1.7-1l2.5 1c.21.09.47 0 .6-.22l2-3.46a.5.5 0 00-.12-.64L19.4 13zM12 15.5A3.5 3.5 0 1112 8.5a3.5 3.5 0 010 7z"/></svg>
@@ -37,17 +46,32 @@
 <main class="container">
   <div id="recent-row" class="recent-row hidden"></div>
 
-  <!-- mode chips -->
+  <!-- view tabs: Search & Gallery -->
   <div class="mode-row" role="tablist">
-    <button class="chip active" data-mode="search" data-i18n="modeSearch">Search</button>
-    <button class="chip" data-mode="board" data-i18n="modeBoard">Board</button>
+    <button class="chip active" id="tab-search" data-view="search">
+      <span class="chip-ico">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </span>
+      <span data-i18n="modeSearch">Search</span>
+    </button>
+    <button class="chip" id="tab-gallery" data-view="gallery">
+      <span class="chip-ico">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      </span>
+      <span data-i18n="modeGallery">Gallery</span> <span id="gallery-badge" class="chip-badge">0</span>
+    </button>
   </div>
 
   <!-- live progress card -->
   <section id="progress-card" class="progress-card hidden">
     <div class="progress-head">
-      <span id="progress-title">…</span>
-      <button id="cancel-btn" class="btn ghost small" data-i18n="cancel">Cancel</button>
+      <div class="progress-head-left">
+        <span id="progress-title">…</span>
+      </div>
+      <div class="progress-head-right">
+        <span id="progress-pct" class="progress-pct">0%</span>
+        <button id="cancel-btn" class="btn ghost small cancel-btn" data-i18n="cancel">Cancel</button>
+      </div>
     </div>
     <div class="phase-chips" id="phase-chips">
       <span class="phase-chip" data-phase="collect" data-i18n="phCollect">Collect</span>
@@ -56,7 +80,6 @@
     </div>
     <div class="bar"><div id="progress-bar" class="bar-fill"></div></div>
     <div id="progress-meta" class="progress-meta"></div>
-    <div id="progress-pct" class="progress-pct">0%</div>
   </section>
 
   <!-- stats summary -->
@@ -66,8 +89,14 @@
     <canvas id="chart-canvas" height="110"></canvas>
   </section>
   <section id="export-bar" class="export-bar hidden">
-    <a id="exp-zip" class="btn primary small" href="#" download>⬇ ZIP images</a>
-    <a id="exp-xlsx" class="btn ghost small" href="#" download>⬇ XLSX</a>
+    <a id="exp-zip" class="btn primary small" href="#" download>
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+      <span data-i18n="expZip">ZIP images</span>
+    </a>
+    <a id="exp-xlsx" class="btn ghost small" href="#" download>
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span data-i18n="expXlsx">XLSX</span>
+    </a>
   </section>
 
   <!-- results masonry -->
@@ -76,57 +105,144 @@
 
   <!-- empty state -->
   <section id="empty" class="empty">
-    <div class="empty-badge">📌</div>
-    <h2 data-i18n="emptyTitle">Find your inspiration</h2>
-    <p data-i18n="emptyText">Search for anything — like “Ana de Armas” — and scrape high-quality images with full metadata.</p>
+    <div class="empty-badge" id="empty-icon">
+      <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-2l-2-3V5a1 1 0 00-1-1H8a1 1 0 00-1 1v7l-2 3v2z"/></svg>
+    </div>
+    <h2 id="empty-title" data-i18n="emptyTitle">Find your inspiration</h2>
+    <p id="empty-text" data-i18n="emptyText">Search for anything — like “Ana de Armas” — and scrape high-quality images with full metadata.</p>
   </section>
 
   <section id="error-card" class="error-card hidden"></section>
 </main>
 
-<!-- Pin detail modal -->
-<div id="pin-modal" class="pin-modal hidden" role="dialog">
-  <button id="pm-prev" class="nav-btn nav-prev" aria-label="Previous">‹</button>
+<!-- Pin detail modal (Redesigned Pinterest Style) -->
+<div id="pin-modal" class="pin-modal" role="dialog" aria-hidden="true">
+  <button id="pm-prev" class="nav-btn nav-prev" aria-label="Previous">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
   <div class="pin-modal-box">
-    <button id="close-pin-modal" class="icon-btn modal-close">✕</button>
+    <!-- Top toolbar -->
+    <div class="pm-topbar">
+      <div class="pm-top-left">
+        <button id="pm-copy-link" class="icon-btn small" title="Copy link">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+        </button>
+        <a id="pm-pin-link" class="btn ghost small" target="_blank" rel="noopener">
+          <span>Pinterest</span>
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+        </a>
+      </div>
+      <div class="pm-top-right">
+        <a id="pm-download" class="btn primary small pm-save" href="#" download>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          <span data-i18n="download">Download</span>
+        </a>
+        <button id="close-pin-modal" class="icon-btn modal-close" aria-label="Close">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Main grid -->
     <div class="pin-modal-grid">
       <div class="pin-modal-imgwrap">
-        <div id="pm-blur" class="pm-blur"></div>
-        <img id="pm-img" src="" alt="">
+        <img id="pm-img" src="" alt="" loading="eager">
       </div>
       <div class="pin-modal-info">
-        <h2 id="pm-title"></h2>
+        <!-- Creator Header -->
+        <div id="pm-creator-card" class="pm-creator-card">
+          <div id="pm-creator-avatar" class="pm-creator-avatar">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <div class="pm-creator-meta">
+            <span id="pm-creator-name" class="pm-creator-name">Creator</span>
+            <span id="pm-creator-user" class="pm-creator-user">@username</span>
+          </div>
+          <a id="pm-creator-link" class="btn ghost small pm-creator-link" target="_blank" rel="noopener">
+            <span data-i18n="profileLabel">Profile</span>
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+          </a>
+        </div>
+
+        <h2 id="pm-title" class="pm-title"></h2>
         <p id="pm-desc" class="pm-desc"></p>
-        <div class="pm-meta-grid" id="pm-table"></div>
-        <div id="pm-colors" class="pm-colors"></div>
+
+        <!-- Metric Badges -->
+        <div class="pm-badges-row">
+          <div class="pm-badge" id="pm-badge-saves">
+            <span class="pm-badge-icon">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-2l-2-3V5a1 1 0 00-1-1H8a1 1 0 00-1 1v7l-2 3v2z"/></svg>
+            </span>
+            <span class="pm-badge-val" id="pm-val-saves">0</span>
+            <span class="pm-badge-lbl" data-i18n="savesLabel">saves</span>
+          </div>
+          <div class="pm-badge" id="pm-badge-comments">
+            <span class="pm-badge-icon">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+            </span>
+            <span class="pm-badge-val" id="pm-val-comments">0</span>
+            <span class="pm-badge-lbl" data-i18n="commentsLabel">comments</span>
+          </div>
+          <div class="pm-badge" id="pm-badge-size">
+            <span class="pm-badge-icon">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M3 9h18"/></svg>
+            </span>
+            <span class="pm-badge-val" id="pm-val-size">—</span>
+          </div>
+        </div>
+
+        <!-- Board info if available -->
+        <div id="pm-board-row" class="pm-board-row hidden">
+          <span class="pm-board-label">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-inline-end:3px"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+            <span data-i18n="boardLabel">Board</span>:
+          </span>
+          <a id="pm-board-name" class="pm-board-link" target="_blank" rel="noopener"></a>
+        </div>
+
+        <!-- Color Palette -->
+        <div class="pm-colors-wrap">
+          <span class="pm-section-label" data-i18n="palette">Palette:</span>
+          <div id="pm-colors" class="pm-colors"></div>
+        </div>
+
+        <!-- Modal Bottom Actions -->
         <div class="pm-actions">
-          <a id="pm-download" class="btn primary pm-save" href="#" download>⬇ <span data-i18n="download">Download</span></a>
-          <button id="pm-visual" class="btn ghost pm-ghost">🔮 <span data-i18n="visualSearch">More like this</span></button>
-          <a id="pm-pin-link" class="btn ghost pm-ghost" target="_blank" rel="noopener">Pinterest ↗</a>
+          <button id="pm-visual" class="btn ghost pm-ghost">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 6.6L21 11l-5.6 4.4L17 22l-5-4-5 4 1.6-6.6L3 11l6.6-2.4z"/></svg>
+            <span data-i18n="visualSearch">More like this</span>
+          </button>
         </div>
       </div>
     </div>
   </div>
-  <button id="pm-next" class="nav-btn nav-next" aria-label="Next">›</button>
+  <button id="pm-next" class="nav-btn nav-next" aria-label="Next">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+  </button>
 </div>
 
 <!-- Selection toolbar -->
 <div id="selection-bar" class="selection-bar hidden">
   <span id="sel-count" class="sel-count">0</span>
-  <button id="sel-delete" class="btn primary small">🗑 <span data-i18n="deleteSelected">Delete selected</span></button>
+  <button id="sel-delete" class="btn primary small">
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+    <span data-i18n="deleteSelected">Delete selected</span>
+  </button>
   <button id="sel-cancel" class="btn ghost small" data-i18n="cancelSel">Cancel</button>
 </div>
 
-<!-- Settings drawer -->
-<div id="overlay" class="overlay hidden"></div>
+<!-- Settings drawer (smooth slide-in) -->
+<div id="overlay" class="overlay"></div>
 <aside id="settings-drawer" class="drawer" aria-hidden="true">
   <div class="drawer-head">
     <h2 data-i18n="settings">Settings</h2>
-    <button id="close-settings" class="icon-btn">✕</button>
+    <button id="close-settings" class="icon-btn" aria-label="Close">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
   </div>
   <div class="drawer-body">
-    <div class="toggle-row"><label data-i18n="optDownload">Download images</label><input type="checkbox" id="opt-download" checked></div>
-    <div class="toggle-row"><label data-i18n="optDetails">Fetch pin details</label><input type="checkbox" id="opt-details" checked></div>
+    <div class="toggle-row"><label data-i18n="optDownload">Download images</label><input type="checkbox" id="opt-download"></div>
+    <div class="toggle-row"><label data-i18n="optDetails">Fetch pin details</label><input type="checkbox" id="opt-details"></div>
     <div class="toggle-row"><label data-i18n="optInsights">Show insights chart</label><input type="checkbox" id="opt-insights"></div>
 
     <h3 data-i18n="qualityHeader">Quality &amp; limits</h3>
@@ -139,7 +255,6 @@
     <div class="field"><label data-i18n="optDelay">Delay between pages (s)</label><input type="number" id="opt-delay" value="1" min="0" step="0.1"></div>
     <div class="field"><label data-i18n="optJitter">Random jitter (s)</label><input type="number" id="opt-jitter" value="0.5" min="0" step="0.1"></div>
     <div class="field"><label data-i18n="optBatch">Save every N pins</label><input type="number" id="opt-batch" value="10" min="1" max="100"></div>
-    <div class="field"><label data-i18n="optProxy">Proxies (comma-separated, optional)</label><input type="text" id="opt-proxy" placeholder="http://host:port"></div>
 
     <button id="reset-settings" class="btn ghost full" data-i18n="resetDefaults">Reset to defaults</button>
   </div>
