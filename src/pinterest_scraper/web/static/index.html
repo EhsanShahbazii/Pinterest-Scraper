@@ -82,23 +82,30 @@
 
 <!-- Pin detail modal -->
 <div id="pin-modal" class="pin-modal hidden" role="dialog">
+  <button id="pm-prev" class="nav-btn nav-prev" aria-label="Previous">‹</button>
   <div class="pin-modal-box">
     <button id="close-pin-modal" class="icon-btn modal-close">✕</button>
     <div class="pin-modal-grid">
-      <div class="pin-modal-imgwrap"><img id="pm-img" src="" alt=""></div>
+      <div class="pin-modal-imgwrap">
+        <div id="pm-blur" class="pm-blur"></div>
+        <img id="pm-img" src="" alt="">
+        <button id="pm-prev-in" class="nav-btn nav-in prev">‹</button>
+        <button id="pm-next-in" class="nav-btn nav-in next">›</button>
+      </div>
       <div class="pin-modal-info">
         <h2 id="pm-title"></h2>
         <p id="pm-desc" class="pm-desc"></p>
-        <table class="pm-table" id="pm-table"></table>
+        <div class="pm-meta-grid" id="pm-table"></div>
         <div id="pm-colors" class="pm-colors"></div>
         <div class="pm-actions">
-          <a id="pm-download" class="btn primary small" href="#" download>⬇ <span data-i18n="download">Download</span></a>
-          <button id="pm-visual" class="btn ghost small">🔮 <span data-i18n="visualSearch">More like this</span></button>
-          <a id="pm-pin-link" class="btn ghost small" target="_blank" rel="noopener">Pinterest ↗</a>
+          <a id="pm-download" class="btn primary pm-save" href="#" download>⬇ <span data-i18n="download">Download</span></a>
+          <button id="pm-visual" class="btn ghost pm-ghost">🔮 <span data-i18n="visualSearch">More like this</span></button>
+          <a id="pm-pin-link" class="btn ghost pm-ghost" target="_blank" rel="noopener">Pinterest ↗</a>
         </div>
       </div>
     </div>
   </div>
+  <button id="pm-next" class="nav-btn nav-next" aria-label="Next">›</button>
 </div>
 
 <!-- History drawer -->
