@@ -341,3 +341,38 @@ body[data-theme="dark"] .skeleton::after {
 body[data-theme="dark"] .drawer, body[data-theme="dark"] .pin-modal-box { background: #1e1e1e; }
 body[data-theme="dark"] .pm-table td { border-bottom-color: #3a3a3a; }
 body[data-theme="dark"] .run-item:hover { background: #2e2e2e; }
+
+/* ================= dark-mode sync fixes ================= */
+.icon-btn { color: var(--ink); }
+.field input {
+  background: var(--surface);
+  color: var(--ink);
+}
+.search-wrap:focus-within { background: var(--surface); }
+body[data-theme="dark"] .suggest-list { background: var(--surface); }
+body[data-theme="dark"] .field input::placeholder,
+body[data-theme="dark"] #search-input::placeholder { color: var(--gray-1); }
+
+/* themed scrollbar */
+:root { --scroll-thumb: #cdcdcd; --scroll-track: transparent; }
+body[data-theme="dark"] { --scroll-thumb: #4a4a4a; --scroll-track: #1a1a1a; }
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) var(--scroll-track);
+}
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--scroll-track); border-radius: 8px; }
+::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb); border-radius: 8px;
+  border: 2px solid transparent; background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background-color: var(--red); }
+
+/* buttery drawer + overlay (fade instead of display flip) */
+.overlay {
+  opacity: 0; visibility: hidden;
+  transition: opacity .28s ease, visibility .28s ease;
+}
+.overlay:not(.hidden) { opacity: 1; visibility: visible; }
+.drawer { will-change: transform; }
+.drawer .drawer-body { overscroll-behavior: contain; }
