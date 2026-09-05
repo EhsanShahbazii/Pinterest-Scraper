@@ -3,6 +3,7 @@
 
 /* ---------------- i18n ---------------- */
 const I18N = {
+  nothingNew: {en: "Nothing new — all these pins are already collected (dedup). Try another query, or turn off dedup in ⚙️ settings.", fa: "چیز جدیدی نبود — این پین‌ها قبلاً جمع‌آوری شده‌اند. جستجوی دیگری امتحان کنید یا حذف تکرار را در ⚙️ خاموش کنید."},
   recent: {en: "Recent:", fa: "اخیر:"},
   download: {en: "Download", fa: "دانلود"},
   visualSearch: {en: "More like this", fa: "پین‌های مشابه"},
@@ -198,6 +199,10 @@ async function finishJob(ev) {
   const data = await res.json();
   lastPins = data.pins || [];
   renderStats(ev);
+  if (!lastPins.length) {
+    const t2 = I18N[settings.lang] || I18N.en;
+    showError(t2.nothingNew || 'Nothing new to collect — try a different query or disable dedup in settings.');
+  }
   renderGrid(lastPins);
   renderChart();
   if (currentJob) {
@@ -388,9 +393,9 @@ input.addEventListener('keydown', (e) => {
     e.preventDefault();
     sugIndex = (sugIndex + (e.key === 'ArrowDown' ? 1 : -1) + sugItems.length) % sugItems.length;
     [...sugList.children].forEach((li, i) => li.classList.toggle('active', i === sugIndex));
-  } else if (e.key === 'Enter' && sugIndex >= 0) {
+  } else if (e.key === 'Enter') {
     e.preventDefault();
-    input.value = sugItems[sugIndex].text;
+    if (sugIndex >= 0 && sugItems[sugIndex]) input.value = sugItems[sugIndex].text;
     hideSuggest();
     startScrape();
   } else if (e.key === 'Escape') {

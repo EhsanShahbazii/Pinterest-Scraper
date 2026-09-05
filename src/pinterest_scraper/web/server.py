@@ -108,7 +108,8 @@ class Job:
         def run_one(query: str) -> list[dict]:
             self.emit(event="query_start", query=query,
                       index=queries.index(query) + 1, total=len(queries))
-            if req.mode == "board":
+            is_board = (req.mode == "board" and "pinterest." in query)
+            if is_board:
                 return board_pins(session, query, req.limit,
                                   delay=req.delay, save_cb=batch_save,
                                   batch_size=req.batch_size, jitter=req.jitter)
