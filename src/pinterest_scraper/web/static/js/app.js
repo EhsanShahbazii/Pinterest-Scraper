@@ -298,3 +298,68 @@ document.querySelectorAll('.chip').forEach(c =>
   c.classList.toggle('active', c.dataset.mode === settings.mode));
 applyLang();
 syncDrawerFromSettings();
+
+/* ---------------- live search suggestions (debounced) ---------------- */
+const sugList = $('suggest-list');
+const input = $('search-input');
+let debounceTimer = null, sugItems = [], sugIndex = -1, sugAbort = null;
+
+function hideSuggest() {
+  sugList.classList.add('hidden');
+  sugList.innerHTML = '';
+  sugItems = []; sugIndex = -1;
+}
+function highlight(q, text) {
+  const i = text.toLowerCase().indexOf(q.toLowerCase());
+  if (i < 0) return escapeHtml(text);
+  return escapeHtml(text.slice(0, i)) + '<b>' + escapeHtml(text.slice(i, i + q.length)) + '</b>' +
+         escapeHtml(text.slice(i + q.length));
+}
+function renderSuggest(q, items) {
+  sugItems = items; sugIndex = -1;
+  sugList.innerHTML = items.map(s =>
+    `<li role="option"><span class="sug-ico"><svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M10 2a8 8 0 105.3 14l4.4 4.4 1.4-1.4-4.4-4.4A8 8 0 0010 2z"/></svg></span><span>${highlight(q, s)}</span></li>`
+  ).join('');
+  sugList.classList.toggle('hidden', items.length === 0);
+  [...sugList.children].forEach((li, i) =>
+    li.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      input.value = sugItems[i];
+      hideSuggest();
+      startScrape();
+    }));
+}
+input.addEventListener('input', () => {
+  clearTimeout(debounceTimer);
+  const q = input.value.trim();
+  if (q.length < 2) { hideSuggest(); return; }
+  debounceTimer = setTimeout(async () => {
+    if (sugAbort) sugAbort.abort();
+    sugAbort = new AbortController();
+    try {
+      const r = await fetch(`/api/suggest?q=${encodeURIComponent(q)}`,
+                            { signal: sugAbort.signal });
+      const { suggestions } = await r.json();
+      if (input.value.trim() === q) renderSuggest(q, suggestions || []);
+    } catch { /* aborted or offline */ }
+  }, 350);
+});
+input.addEventListener('keydown', (e) => {
+  if (sugItems.length === 0) return;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    sugIndex = (sugIndex + (e.key === 'ArrowDown' ? 1 : -1) + sugItems.length) % sugItems.length;
+    [...sugList.children].forEach((li, i) => li.classList.toggle('active', i === sugIndex));
+  } else if (e.key === 'Enter' && sugIndex >= 0) {
+    e.preventDefault();
+    input.value = sugItems[sugIndex];
+    hideSuggest();
+    startScrape();
+  } else if (e.key === 'Escape') {
+    hideSuggest();
+  }
+});
+input.addEventListener('blur', () => setTimeout(hideSuggest, 150));
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.search-wrap')) hideSuggest();
+});

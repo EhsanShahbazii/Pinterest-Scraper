@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 import queue
 import threading
 import uuid
@@ -26,7 +27,7 @@ from pydantic import BaseModel, Field
 from ..dedupe import DedupeStore
 from ..downloader import download_all
 from ..http import build_session
-from ..scraper import board_pins, enrich_with_details, search_pins
+from ..scraper import board_pins, enrich_with_details, search_pins, suggest_queries
 from ..storage import save_outputs
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -229,6 +230,43 @@ def job_image(job_id: str, name: str):
     if not str(path).startswith(str((job.out_dir).resolve())) or not path.is_file():
         raise HTTPException(404, "not found")
     return FileResponse(path)
+
+
+
+# --- live search suggestions (cached, coalesced) ---
+_SUGGEST_TTL = 300  # seconds
+_suggest_cache: dict[str, tuple[float, list[str]]] = {}
+_suggest_locks: dict[str, threading.Lock] = {}
+_suggest_locks_guard = threading.Lock()
+
+
+@app.get("/api/suggest")
+def suggest(q: str = ""):
+    q = q.strip().lower()
+    if len(q) < 2:
+        return {"suggestions": []}
+    now = time.monotonic()
+    hit = _suggest_cache.get(q)
+    if hit and now - hit[0] < _SUGGEST_TTL:
+        return {"suggestions": hit[1]}
+    with _suggest_locks_guard:
+        lock = _suggest_locks.setdefault(q, threading.Lock())
+    with lock:  # coalesce concurrent identical requests
+        now = time.monotonic()
+        hit = _suggest_cache.get(q)
+        if hit and now - hit[0] < _SUGGEST_TTL:
+            return {"suggestions": hit[1]}
+        try:
+            session = build_session()
+            out = suggest_queries(session, q)
+        except Exception:  # noqa: BLE001 — suggestions must never break the UI
+            out = []
+        _suggest_cache[q] = (now, out)
+        if len(_suggest_cache) > 200:  # simple size cap
+            oldest = sorted(_suggest_cache, key=lambda k: _suggest_cache[k][0])
+            for k in oldest[:100]:
+                _suggest_cache.pop(k, None)
+        return {"suggestions": out}
 
 
 def main():

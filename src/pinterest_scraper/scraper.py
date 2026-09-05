@@ -253,3 +253,28 @@ def board_pins(session: requests.Session, board_url: str, limit: int,
     if save_cb and len(pins) > saved_count:
         save_cb(pins)
     return pins[:limit]
+
+
+def suggest_queries(session: requests.Session, term: str) -> list[str]:
+    """Live search suggestions from Pinterest's advanced typeahead endpoint."""
+    from .config import SUGGEST_URL
+
+    term = term.strip()
+    if not term:
+        return []
+    options = {"term": term, "pin_id": ""}
+    data, _ = api_data(session, SUGGEST_URL, options, "/",
+                       handler="www/[username].js")
+    out: list[str] = []
+    if isinstance(data, dict):
+        for item in data.get("items", []) or []:
+            if isinstance(item, dict):
+                q = str(item.get("query") or item.get("label") or "").strip()
+                if q and q.lower() not in {o.lower() for o in out}:
+                    out.append(q)
+    elif isinstance(data, list):
+        for item in data:
+            q = (item.get("query") if isinstance(item, dict) else str(item)).strip()
+            if q and q.lower() not in {o.lower() for o in out}:
+                out.append(q)
+    return out[:8]

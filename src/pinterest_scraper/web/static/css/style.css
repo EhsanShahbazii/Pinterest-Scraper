@@ -199,3 +199,19 @@ body {
   .masonry { columns: 2; column-gap: 10px; }
   .pin-card { margin-bottom: 10px; }
 }
+
+/* ---------- Search suggestions ---------- */
+.search-wrap { position: relative; }
+.suggest-list {
+  position: absolute; top: calc(100% + 6px); inset-inline-start: 0;
+  width: 100%; background: #fff; border-radius: var(--radius);
+  box-shadow: var(--shadow); list-style: none; overflow: hidden;
+  z-index: 60; padding: 6px 0;
+}
+.suggest-list li {
+  padding: 10px 18px; font-size: .95rem; font-weight: 500;
+  cursor: pointer; display: flex; align-items: center; gap: 10px;
+}
+.suggest-list li .sug-ico { color: var(--gray-1); flex-shrink: 0; display: grid; place-items: center; }
+.suggest-list li:hover, .suggest-list li.active { background: var(--surface); }
+.suggest-list li b { color: var(--red); font-weight: 700; }
