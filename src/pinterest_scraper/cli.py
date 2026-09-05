@@ -54,7 +54,7 @@ def build_parser() -> argparse.ArgumentParser:
         sp.add_argument("--no-dedup", action="store_true",
                         help="disable deduplication (re-scrape everything)")
 
-    s1 = sub.add_parser("search", help="search by keyword, e.g. 'taylor swift'")
+    s1 = sub.add_parser("search", help="search by keyword, e.g. 'Ana de Armas'")
     common(s1)
     s1.add_argument("query", nargs="?", default="")
 
@@ -94,7 +94,7 @@ def interactive() -> argparse.Namespace:
     console.print("[dim]Press Enter to accept the [default] value.\n[/]")
 
     console.print("[bold]What do you want to scrape?[/]")
-    console.print("  [cyan]1.[/] Keyword search  (e.g. 'taylor swift')")
+    console.print("  [cyan]1.[/] Keyword search  (e.g. 'Ana de Armas')")
     console.print("  [cyan]2.[/] A board URL      (e.g. .../user/board-name/)")
     console.print("  [cyan]3.[/] Specific pin(s)  (IDs or URLs)")
     choice = ask("Choose 1/2/3", "1")
@@ -103,7 +103,7 @@ def interactive() -> argparse.Namespace:
     ns = build_parser().parse_args([mode])
 
     if mode == "search":
-        ns.query = ask("Keyword to search", "taylor swift")
+        ns.query = ask("Keyword to search", "Ana de Armas")
     elif mode == "board":
         ns.url = ask("Board URL", "https://www.pinterest.com/SanSwift12/your-voice-can-calm-the-ocean/")
     else:

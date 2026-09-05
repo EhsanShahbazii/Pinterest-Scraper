@@ -312,3 +312,28 @@ def suggest_queries(session: requests.Session, term: str) -> list[str]:
     """Query-only suggestions (backwards compatible)."""
     return [s["text"] for s in typeahead_suggestions(session, term)
             if s["type"] == "query"]
+
+
+def related_pins(session: requests.Session, pin_id: str, limit: int = 25) -> list[dict]:
+    """Visually-similar pins for a given pin (Pinterest 'More like this').
+
+    Uses RelatedModulesResource, which returns story modules; every module of
+    type 'pin' is a related pin with full image data.
+    """
+    from .config import RELATED_URL
+
+    options = {"pin_id": pin_id, "page_size": max(limit, 25)}
+    data, _ = api_data(session, RELATED_URL, options, f"/pin/{pin_id}/",
+                       handler="www/pin/[id].js")
+    out: list[dict] = []
+    seen: set[str] = set()
+    for module in data if isinstance(data, list) else []:
+        if module.get("type") != "pin" or not isinstance(module, dict):
+            continue
+        pin = extract_pin(module)
+        if pin and pin["pin_id"] not in seen:
+            seen.add(pin["pin_id"])
+            out.append(pin)
+            if len(out) >= limit:
+                break
+    return out

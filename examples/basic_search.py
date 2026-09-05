@@ -6,7 +6,7 @@ from pinterest_scraper.storage import save_outputs
 from pathlib import Path
 
 session = build_session()
-pins = search_pins(session, "taylor swift", limit=10)
+pins = search_pins(session, "Ana de Armas", limit=10)
 
 for pin in pins:
     print(f"{pin['pin_id']}  {pin['width']}x{pin['height']}  saves={pin['saves']}\n  {pin['image_url']}")
