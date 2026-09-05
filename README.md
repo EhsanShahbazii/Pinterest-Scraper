@@ -1,16 +1,36 @@
 # 🎨 Pinterest Scraper
 
-> Scrape Pinterest with Python — high-quality pin images, full metadata,
-> deduplicated & batch-saved, wrapped in a beautiful CLI.
+> Scrape Pinterest the easy way — original-quality pin images, rich structured
+> metadata, and a beautiful experience in both the **browser** and the
+> **terminal**. No login, no API key, no code required.
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Code style: rich CLI](https://img.shields.io/badge/UI-rich-ff69b4)](https://github.com/Textualize/rich)
+[![CI](https://github.com/EhsanShahbazii/Pinterest-Scraper/actions/workflows/ci.yml/badge.svg)](https://github.com/EhsanShahbazii/Pinterest-Scraper/actions/workflows/ci.yml)
+[![UI: Rich CLI](https://img.shields.io/badge/CLI-rich-ff69b4)](https://github.com/Textualize/rich)
+[![Web: FastAPI](https://img.shields.io/badge/Web-FastAPI%20%2B%20Vanilla%20JS-009688)](https://fastapi.tiangolo.com/)
+[![i18n: EN / فارسی](https://img.shields.io/badge/i18n-EN%20%2F%20فارسی-E60023)](#-web-app-browser-ui)
 
-`pinterest-scraper` talks to the same internal JSON resource endpoints the
-Pinterest website uses, so you get **structured data — not scraped HTML**:
-original-resolution image URLs, save/comment counts, creator & board info,
-external links, dominant colors, video URLs and more. No login, no API key.
+## 📖 About
+
+**Pinterest Scraper** talks to the same internal JSON resource endpoints the
+Pinterest website itself uses — so you get **structured data, not scraped
+HTML**. For every pin you collect, you receive the original-resolution image
+URL plus everything Pinterest exposes about it: save / repin / like / comment
+counts, creator and board info, external links, dominant colors, video URLs,
+and every available image-size variant.
+
+It ships with **two interfaces** sharing one engine:
+
+| Interface | Best for |
+|---|---|
+| 🌐 **Web App** — Pinterest-styled browser UI with a masonry grid, settings drawer, live progress, and English/فارسی support | Everyone — point, click, scrape |
+| 🖥 **CLI** — `rich`-powered terminal app with progress bars and a guided interactive wizard | Power users, automation, scripting |
+
+Everything is polite and safe by design: requests are rate-limit aware,
+fingerprint-randomized, images and metadata are **deduplicated across runs**,
+and data is saved to disk in small crash-safe batches — so an interrupted run
+never loses work.
 
 ## ✨ Features
 
@@ -28,7 +48,82 @@ external links, dominant colors, video URLs and more. No login, no API key.
 - 🚦 **Rate-limit aware** — HTTP 429 randomized cooldown, exponential backoff
 - 🖥 **Gorgeous CLI** — rich banner, live progress bars, results table, and a
   fully guided interactive wizard
+- 🌐 **Web App** — masonry image grid, full settings panel, live SSE progress,
+  bilingual English / فارسی (RTL), settings saved in your browser
 - ♻️ **Resumable** — existing files are skipped, not re-downloaded
+
+## 📸 Screenshots
+
+> Drop your screenshots into [`docs/screenshots/`](docs/screenshots/) using
+> the exact filenames below and they will appear here automatically.
+
+### 🌐 Web App
+
+<!-- Row 1: web app -->
+<p align="center">
+  <img src="docs/screenshots/web-home.png" alt="Web app — home & search" width="85%">
+</p>
+<p align="center">
+  <em>Web app — Pinterest-styled home with search bar and mode chips.</em>
+</p>
+
+<!-- Row 2: results grid + settings side by side -->
+<p align="center">
+  <table>
+    <tr>
+      <td align="center"><img src="docs/screenshots/web-results.png" alt="Web app — results masonry grid" width="100%"></td>
+      <td align="center"><img src="docs/screenshots/web-settings.png" alt="Web app — settings drawer" width="100%"></td>
+    </tr>
+    <tr>
+      <td align="center"><em>Results — masonry grid of original-quality pins</em></td>
+      <td align="center"><em>Settings drawer — full control over everything</em></td>
+    </tr>
+  </table>
+</p>
+
+<!-- Row 3: farsi / progress -->
+<p align="center">
+  <table>
+    <tr>
+      <td align="center"><img src="docs/screenshots/web-farsi.png" alt="Web app — Persian RTL interface" width="100%"></td>
+      <td align="center"><img src="docs/screenshots/web-progress.png" alt="Web app — live progress" width="100%"></td>
+    </tr>
+    <tr>
+      <td align="center"><em>فارسی — full RTL with the Vazirmatn font</em></td>
+      <td align="center"><em>Live progress — collecting → details → downloading</em></td>
+    </tr>
+  </table>
+</p>
+
+### 🖥 CLI
+
+<p align="center">
+  <table>
+    <tr>
+      <td align="center"><img src="docs/screenshots/cli-banner.png" alt="CLI — banner & wizard" width="100%"></td>
+      <td align="center"><img src="docs/screenshots/cli-results.png" alt="CLI — progress & results table" width="100%"></td>
+    </tr>
+    <tr>
+      <td align="center"><em>Interactive wizard</em></td>
+      <td align="center"><em>Live progress bars & results summary</em></td>
+    </tr>
+  </table>
+</p>
+
+<details>
+<summary>📁 Expected screenshot filenames</summary>
+
+| File | Shows |
+|---|---|
+| `docs/screenshots/web-home.png` | Web app home / search screen |
+| `docs/screenshots/web-results.png` | Masonry results grid |
+| `docs/screenshots/web-settings.png` | Settings drawer |
+| `docs/screenshots/web-farsi.png` | Persian (RTL) interface |
+| `docs/screenshots/web-progress.png` | Live progress + stats |
+| `docs/screenshots/cli-banner.png` | CLI banner / wizard |
+| `docs/screenshots/cli-results.png` | CLI progress & results table |
+
+</details>
 
 ## 📦 Install
 
@@ -39,8 +134,8 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install .
 ```
 
-Requires Python 3.10+. Dependencies: `requests`, `rich` (installed
-automatically).
+Requires Python 3.10+. Dependencies (installed automatically):
+`requests`, `rich`, `fastapi`, `uvicorn`.
 
 ## 🚀 Quick start
 
@@ -125,14 +220,18 @@ images belong to their creators — don't republish without permission.
 
 ```
 src/pinterest_scraper/
-├── cli.py          # argparse subcommands + interactive wizard
-├── config.py       # endpoints, fingerprint pools, CSV schema
-├── http.py         # session, retries, proxy rotation, API helpers
-├── scraper.py      # search / board / pin-details / normalization
-├── downloader.py   # concurrent resumable image downloads
-├── dedupe.py       # persistent self-healing dedup store
-├── storage.py      # merge-safe batched JSON/CSV persistence
-└── ui.py           # rich banner, progress bars, summary table
+├── cli.py            # argparse subcommands + interactive wizard
+├── config.py         # endpoints, fingerprint pools, CSV schema
+├── http.py           # session, retries, proxy rotation, API helpers
+├── scraper.py        # search / board / pin-details / normalization
+├── downloader.py     # concurrent resumable image downloads
+├── dedupe.py         # persistent self-healing dedup store
+├── storage.py        # merge-safe batched JSON/CSV persistence
+├── ui.py             # rich banner, progress bars, summary table
+└── web/              # 🌐 browser app
+    ├── server.py     # FastAPI: jobs, SSE progress, image serving
+    └── static/       # SPA: HTML / CSS / JS (no build step)
+docs/screenshots/     # 📸 your screenshots go here (see Screenshots)
 ```
 
 ## 🤝 Contributing
