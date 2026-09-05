@@ -67,7 +67,7 @@ body {
 
 /* ---------- Progress ---------- */
 .progress-card, .stats-card {
-  background: #fff; border: 1px solid var(--gray-2); border-radius: var(--radius);
+  background: var(--surface); border: 1px solid var(--gray-2); border-radius: var(--radius);
   padding: 16px 20px; margin-bottom: 20px; box-shadow: var(--shadow);
 }
 .progress-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: 600; }
@@ -204,10 +204,12 @@ body {
 .search-wrap { position: relative; }
 .suggest-list {
   position: absolute; top: calc(100% + 6px); inset-inline-start: 0;
-  width: 100%; background: #fff; border-radius: var(--radius);
+  width: 100%; background: var(--surface); border-radius: var(--radius);
   box-shadow: var(--shadow); list-style: none; overflow: hidden;
   z-index: 60; padding: 6px 0;
+  display: none;
 }
+.suggest-list.show { display: block; animation: fade .18s ease; }
 .suggest-list li {
   padding: 10px 18px; font-size: .95rem; font-weight: 500;
   cursor: pointer; display: flex; align-items: center; gap: 10px;
@@ -376,3 +378,23 @@ body[data-theme="dark"] { --scroll-thumb: #4a4a4a; --scroll-track: #1a1a1a; }
 .overlay:not(.hidden) { opacity: 1; visibility: visible; }
 .drawer { will-change: transform; }
 .drawer .drawer-body { overscroll-behavior: contain; }
+
+/* ================= selection mode & misc v1.3 ================= */
+.selection-bar {
+  position: fixed; bottom: 20px; inset-inline-start: 50%; transform: translateX(-50%);
+  z-index: 150; display: flex; gap: 12px; align-items: center;
+  background: var(--surface); padding: 10px 16px; border-radius: 999px;
+  box-shadow: var(--shadow); animation: fade .2s ease;
+}
+[dir="rtl"] .selection-bar { transform: translateX(50%); }
+.sel-count { font-weight: 700; font-size: .9rem; white-space: nowrap; }
+.pin-card.selectable { cursor: pointer; }
+.pin-card.selected { outline: 4px solid var(--red); outline-offset: -4px; }
+.pin-card.selected::after {
+  content: '✓'; position: absolute; top: 10px; inset-inline-end: 10px;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--red); color: #fff; font-weight: 800;
+  display: grid; place-items: center; z-index: 3;
+}
+.clear-chip { color: var(--gray-1); font-size: .8rem; }
+.clear-chip:hover { color: var(--red); }
