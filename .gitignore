@@ -10,3 +10,7 @@ demo_output/
 test_output/
 .seen_pins.json
 .DS_Store
+
+# web app output
+web_output/
+.DS_Store
