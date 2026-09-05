@@ -25,23 +25,26 @@ class DedupeStore:
         self.dup_pins = 0
         if enabled and path.exists():
             try:
-                data = json.loads(path.read_text())
+                data = json.loads(path.read_text(encoding="utf-8"))
                 self.pin_ids = set(data.get("pin_ids", []))
                 self.image_urls = set(data.get("image_urls", []))
-            except (ValueError, OSError):
+            except (ValueError, OSError, TypeError):
                 console.print("[yellow]! dedupe store unreadable — starting fresh[/]")
         if enabled and scan_dir and scan_dir.exists():
             for jf in scan_dir.glob("*.json"):
                 if jf.name == path.name:
                     continue
                 try:
-                    for old in json.loads(jf.read_text()):
-                        pid = str(old.get("pin_id") or "")
-                        if pid:
-                            self.pin_ids.add(pid)
-                        url = (old.get("image_url") or "").split("?")[0]
-                        if url:
-                            self.image_urls.add(url)
+                    items = json.loads(jf.read_text(encoding="utf-8"))
+                    if isinstance(items, list):
+                        for old in items:
+                            if isinstance(old, dict):
+                                pid = str(old.get("pin_id") or "")
+                                if pid:
+                                    self.pin_ids.add(pid)
+                                url = (old.get("image_url") or "").split("?")[0]
+                                if url:
+                                    self.image_urls.add(url)
                 except (ValueError, OSError, TypeError):
                     pass
 
@@ -77,4 +80,4 @@ class DedupeStore:
         self.path.write_text(json.dumps({
             "pin_ids": sorted(self.pin_ids),
             "image_urls": sorted(self.image_urls),
-        }))
+        }), encoding="utf-8")

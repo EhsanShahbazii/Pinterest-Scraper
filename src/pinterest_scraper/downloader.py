@@ -25,11 +25,17 @@ def download_image(session: requests.Session, pin: dict, out_dir: Path,
     upgraded = re.sub(r"/(\d+x\d*|\d+x)/", "/originals/", url)
     candidates = [upgraded, url] if upgraded != url else [url]
 
+    for existing in out_dir.glob(f"{pin['pin_id']}.*"):
+        if existing.is_file() and existing.stat().st_size > 0:
+            pin["local_file"] = existing.name
+            return "EXISTS"
+
     for url in candidates:
         ext = Path(urlparse(url).path).suffix.lower() or ".jpg"
         filename = f"{pin['pin_id']}{ext}"
         dest = out_dir / filename
         if dest.exists() and dest.stat().st_size > 0:
+            pin["local_file"] = filename
             return "EXISTS"
         for attempt in range(1, max_retries + 1):
             try:
@@ -42,6 +48,7 @@ def download_image(session: requests.Session, pin: dict, out_dir: Path,
                     with open(dest, "wb") as f:
                         for chunk in r.iter_content(65536):
                             f.write(chunk)
+                    pin["local_file"] = filename
                     return filename
             except requests.RequestException:
                 pass

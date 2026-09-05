@@ -155,6 +155,12 @@ def run(args: argparse.Namespace) -> None:
     elif args.mode == "pin":
         stem, pins = "pins", []
         for ref in args.pins:
+            if "pin.it" in ref:
+                try:
+                    resp = session.head(ref, allow_redirects=True, timeout=10)
+                    ref = resp.url
+                except requests.RequestException:
+                    pass
             m = re.search(r"/pin/(\d+)", ref)
             pin_id = m.group(1) if m else (ref.strip() if ref.strip().isdigit() else "")
             if pin_id:
@@ -170,9 +176,12 @@ def run(args: argparse.Namespace) -> None:
     else:
         last = args.url.rstrip("/").split("/")[-1]
         stem = re.sub(r"[^a-z0-9]+", "_", last.lower())[:40] or "board"
-        pins = board_pins(session, args.url, args.limit, args.delay,
-                          save_cb=batch_save, batch_size=args.batch_size,
-                          jitter=args.jitter)
+        try:
+            pins = board_pins(session, args.url, args.limit, args.delay,
+                              save_cb=batch_save, batch_size=args.batch_size,
+                              jitter=args.jitter)
+        except ValueError as e:
+            die(str(e))
 
     # ---- deduplicate --------------------------------------------------------
     pins = dedupe.filter(pins)

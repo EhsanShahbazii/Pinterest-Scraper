@@ -25,8 +25,9 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
+from ..dedupe import DedupeStore
 from ..downloader import download_all
 from ..http import build_session
 from ..scraper import (board_pins, enrich_with_details, related_pins,
@@ -37,7 +38,9 @@ STATIC_DIR = Path(__file__).parent / "static"
 
 
 class ScrapeRequest(BaseModel):
-    mode: str = Field(pattern="^(search|board)$")
+    model_config = ConfigDict(extra="ignore")
+
+    mode: str = Field(default="search", pattern="^(search|board)?$")
     query: str = Field(min_length=1)
     limit: int = Field(default=25, ge=1, le=500)
     download: bool = True
@@ -93,6 +96,8 @@ class Job:
         req = self.req
         session = build_session(
             proxy_pool=[p.strip() for p in req.proxy.split(",") if p.strip()] or None)
+        store = (DedupeStore(self.out_dir / ".seen_pins.json", scan_dir=self.out_dir)
+                 if req.dedup else None)
         queries = [q.strip() for q in req.query.split(",") if q.strip()] or [req.query]
         batch = len(queries) > 1
         stem = (queries[0] if not batch else queries[0] + "-batch")
@@ -101,7 +106,7 @@ class Job:
         def run_one(query: str) -> list[dict]:
             self.emit(event="query_start", query=query,
                       index=queries.index(query) + 1, total=len(queries))
-            is_board = (req.mode == "board" and "pinterest." in query)
+            is_board = (req.mode == "board")
             if is_board:
                 return board_pins(session, query, req.limit,
                                   delay=req.delay, save_cb=batch_save,
@@ -118,22 +123,48 @@ class Job:
             self._check_cancel()
             new = [p for p in partial if p["pin_id"] not in
                    {q["pin_id"] for q in self.pins}]
+            if store:
+                new = store.filter(new)
             self.pins.extend(new)
             self.emit(event="progress", phase="collect", count=len(self.pins),
                       total=collect_total)
             save_outputs(self.pins, self.out_dir, stem)  # batch-safe on-disk save
 
         existing_ids = {p["pin_id"] for p in self.pins}
-        pins: list[dict] = []
+        raw_pins: list[dict] = []
         for q in queries:
             for p in run_one(q):
                 if p["pin_id"] not in existing_ids:
                     existing_ids.add(p["pin_id"])
-                    pins.append(p)
+                    raw_pins.append(p)
             self._check_cancel()
-        if batch:
-            save_outputs(self.pins, self.out_dir, stem)
-        self.emit(event="queries_done", total=len(pins))
+
+        pins = list(raw_pins)
+
+        if not pins:
+            clean_stem = re.sub(r"[^\w\-]+", "_", stem.lower().strip())
+            for candidate_name in (f"{stem}.json", f"{clean_stem}.json", f"{stem.lower()}.json"):
+                cached_file = self.out_dir / candidate_name
+                if cached_file.exists():
+                    try:
+                        loaded = json.loads(cached_file.read_text(encoding="utf-8"))
+                        if isinstance(loaded, list) and loaded:
+                            pins = loaded
+                            break
+                    except Exception:
+                        pass
+
+        img_dir = self.out_dir / "images"
+        if img_dir.exists():
+            for p in pins:
+                if not p.get("local_file"):
+                    for ext in (".jpg", ".png", ".webp", ".jpeg"):
+                        candidate = img_dir / f"{p['pin_id']}{ext}"
+                        if candidate.is_file() and candidate.stat().st_size > 0:
+                            p["local_file"] = candidate.name
+                            break
+
+        self.pins = pins
 
         if not pins:
             self.emit(event="nothing_new", total=0)
@@ -144,6 +175,8 @@ class Job:
             done = {"n": 0}
 
             def _detail_cb(n):
+                if self.cancelled:
+                    raise RuntimeError("cancelled by user")
                 done["n"] = max(done["n"], n)
                 self.emit(event="progress", phase="details",
                           count=done["n"], total=len(pins))
@@ -158,6 +191,8 @@ class Job:
             from ..downloader import download_all
 
             def _dl_cb(n):
+                if self.cancelled:
+                    raise RuntimeError("cancelled by user")
                 self.emit(event="progress", phase="download",
                           count=n, total=len(pins))
 
@@ -179,9 +214,7 @@ JOBS: dict[str, Job] = {}
 
 
 def _job_out_dir() -> Path:
-    root = Path("web_output")
-    root.mkdir(exist_ok=True)
-    return root
+    return Path("web_output")
 
 
 app = FastAPI(title="Pinterest Scraper Web")
@@ -247,6 +280,9 @@ def cancel_job(job_id: str):
     if not job:
         raise HTTPException(404, "unknown job")
     job.cancelled = True
+    job.status = "cancelled"
+    job.done.set()
+    job.emit(event="done", status="cancelled", total=len(job.pins), stats=job.stats)
     return {"ok": True}
 
 
@@ -301,11 +337,70 @@ def suggest(q: str = ""):
 
 @app.get("/api/images/{name}")
 def global_image(name: str):
-    path = (_job_out_dir() / "images" / name).resolve()
-    if not str(path).startswith(str((_job_out_dir() / "images").resolve())) \
-            or not path.is_file():
+    img_dir = (_job_out_dir() / "images").resolve()
+    path = (img_dir / name).resolve()
+    if not path.is_relative_to(img_dir) or not path.is_file():
         raise HTTPException(404, "not found")
     return FileResponse(path)
+
+
+@app.get("/api/gallery")
+def get_gallery():
+    img_dir = (_job_out_dir() / "images").resolve()
+    if not img_dir.exists():
+        return {"pins": [], "total": 0}
+
+    metadata_map: dict[str, dict] = {}
+    for jf in _job_out_dir().glob("*.json"):
+        if jf.name == "schedules.json" or jf.name.startswith("."):
+            continue
+        try:
+            items = json.loads(jf.read_text(encoding="utf-8"))
+            if isinstance(items, list):
+                for p in items:
+                    if isinstance(p, dict) and p.get("pin_id"):
+                        metadata_map[str(p["pin_id"])] = p
+        except Exception:
+            pass
+
+    gallery_pins = []
+    valid_exts = {".jpg", ".jpeg", ".png", ".webp"}
+    image_files = sorted(
+        [f for f in img_dir.iterdir() if f.is_file() and f.suffix.lower() in valid_exts],
+        key=lambda f: f.stat().st_mtime,
+        reverse=True,
+    )
+    for f in image_files:
+        pin_id = f.stem
+        meta = metadata_map.get(pin_id)
+        if meta:
+            p = dict(meta)
+            p["local_file"] = f.name
+        else:
+            p = {
+                "pin_id": pin_id,
+                "title": f"Pin {pin_id}",
+                "description": "",
+                "local_file": f.name,
+                "image_url": f"/api/images/{f.name}",
+                "pin_url": f"https://www.pinterest.com/pin/{pin_id}/" if pin_id.isdigit() else "",
+                "saves": None,
+                "comments": None,
+            }
+        gallery_pins.append(p)
+
+    return {"pins": gallery_pins, "total": len(gallery_pins)}
+
+
+@app.get("/api/gallery/export/zip")
+def export_gallery():
+    img_dir = (_job_out_dir() / "images").resolve()
+    valid_exts = {".jpg", ".jpeg", ".png", ".webp"}
+    if not img_dir.exists():
+        pins = []
+    else:
+        pins = [{"local_file": f.name} for f in img_dir.iterdir() if f.is_file() and f.suffix.lower() in valid_exts]
+    return _zip_response(pins)
 
 
 def _zip_response(pins: list[dict]) -> StreamingResponse:
@@ -323,8 +418,11 @@ def _zip_response(pins: list[dict]) -> StreamingResponse:
 
 
 def _xlsx_response(pins: list[dict]) -> StreamingResponse:
-    from openpyxl import Workbook
-    from openpyxl.utils import get_column_letter
+    try:
+        from openpyxl import Workbook
+        from openpyxl.utils import get_column_letter
+    except ImportError:
+        raise HTTPException(500, "openpyxl is required for XLSX export. Run: pip install openpyxl")
 
     wb = Workbook()
     ws = wb.active
@@ -387,14 +485,15 @@ SCHEDULES_FILE = _job_out_dir() / "schedules.json"
 def _load_schedules() -> list[dict]:
     if SCHEDULES_FILE.exists():
         try:
-            return json.loads(SCHEDULES_FILE.read_text())
+            return json.loads(SCHEDULES_FILE.read_text(encoding="utf-8"))
         except (ValueError, OSError):
             return []
     return []
 
 
 def _save_schedules(items: list[dict]) -> None:
-    SCHEDULES_FILE.write_text(json.dumps(items, ensure_ascii=False, indent=1))
+    SCHEDULES_FILE.parent.mkdir(parents=True, exist_ok=True)
+    SCHEDULES_FILE.write_text(json.dumps(items, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
 class ScheduleIn(BaseModel):
@@ -437,7 +536,8 @@ def _scheduler_loop():
         try:
             now = time.time()
             changed = False
-            for sch in _load_schedules():
+            schedules = _load_schedules()
+            for sch in schedules:
                 if now >= sch.get("next_run", now + 3600):
                     req = ScrapeRequest(
                         mode=sch["mode"], query=sch["query"], limit=sch["limit"],
@@ -451,7 +551,7 @@ def _scheduler_loop():
                     sch["last_job_id"] = job.id
                     changed = True
             if changed:
-                _save_schedules(_load_schedules())
+                _save_schedules(schedules)
         except Exception:  # noqa: BLE001 — scheduler must never die
             pass
         time.sleep(60)

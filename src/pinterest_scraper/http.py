@@ -45,7 +45,8 @@ def build_session(proxy_pool: list[str] | None = None) -> requests.Session:
     s.proxies_pool = proxy_pool or []  # type: ignore[attr-defined]
     try:
         home = s.get(f"{BASE}/", timeout=15,
-                     headers=browser_headers(referer="https://www.pinterest.com/"))
+                     headers=browser_headers(referer="https://www.pinterest.com/"),
+                     proxies=_pick_proxies(s))
         m = re.search(r'"appVersion":"([^"]+)"', home.text)
         if m:
             s.headers["X-APP-VERSION"] = m.group(1)
