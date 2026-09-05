@@ -336,10 +336,6 @@ body[data-theme="dark"] .skeleton::after {
 }
 .nav-btn:hover { transform: scale(1.1); background: var(--red); color: #fff; }
 .nav-btn:active { transform: scale(.96); }
-.nav-in { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; width: 40px; height: 40px; font-size: 22px; }
-.nav-in.prev { inset-inline-start: 12px; }
-.nav-in.next { inset-inline-end: 12px; }
-.nav-in:hover { transform: translateY(-50%) scale(1.1); }
 
 /* info pane */
 .pin-modal-info {

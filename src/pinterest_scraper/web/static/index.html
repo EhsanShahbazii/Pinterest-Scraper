@@ -26,9 +26,6 @@
   </form>
 
   <div class="top-actions">
-    <button id="history-btn" class="icon-btn" title="Past runs" aria-label="Past runs">
-      <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M13 3a9 9 0 00-9 9H1l3.9 3.9L9 12H6a7 7 0 117 7 6.9 6.9 0 01-4.9-2l-1.4 1.4A8.9 8.9 0 1013 3zm-1 5v5l4.3 2.5.7-1.2-3.5-2.1V8h-1.5z"/></svg>
-    </button>
     <button id="theme-btn" class="icon-btn" title="Theme" aria-label="Theme"><span id="theme-icon">🌙</span></button>
     <button id="lang-btn" class="icon-btn" title="Language / زبان"><span id="lang-label">فا</span></button>
     <button id="settings-btn" class="icon-btn" title="Settings" aria-label="Settings">
@@ -96,8 +93,6 @@
       <div class="pin-modal-imgwrap">
         <div id="pm-blur" class="pm-blur"></div>
         <img id="pm-img" src="" alt="">
-        <button id="pm-prev-in" class="nav-btn nav-in prev">‹</button>
-        <button id="pm-next-in" class="nav-btn nav-in next">›</button>
       </div>
       <div class="pin-modal-info">
         <h2 id="pm-title"></h2>
@@ -115,18 +110,6 @@
   <button id="pm-next" class="nav-btn nav-next" aria-label="Next">›</button>
 </div>
 
-<!-- History drawer -->
-<aside id="history-drawer" class="drawer" aria-hidden="true">
-  <div class="drawer-head">
-    <h2 data-i18n="historyTitle">Past runs</h2>
-    <button id="close-history" class="icon-btn">✕</button>
-  </div>
-  <div class="drawer-body">
-    <div id="history-list" class="history-list"></div>
-    <button id="clear-runs" class="btn ghost full" data-i18n="clearRuns">🗑 Clear past runs list</button>
-  </div>
-</aside>
-
 <!-- Selection toolbar -->
 <div id="selection-bar" class="selection-bar hidden">
   <span id="sel-count" class="sel-count">0</span>
@@ -143,8 +126,7 @@
   </div>
   <div class="drawer-body">
     <div class="toggle-row"><label data-i18n="optDownload">Download images</label><input type="checkbox" id="opt-download" checked></div>
-    <div class="toggle-row"><label data-i18n="optDetails">Fetch full details (saves, comments…)</label><input type="checkbox" id="opt-details" checked></div>
-    <div class="toggle-row"><label data-i18n="optDedup">Skip duplicates</label><input type="checkbox" id="opt-dedup" checked></div>
+    <div class="toggle-row"><label data-i18n="optDetails">Fetch pin details</label><input type="checkbox" id="opt-details" checked></div>
     <div class="toggle-row"><label data-i18n="optInsights">Show insights chart</label><input type="checkbox" id="opt-insights"></div>
 
     <h3 data-i18n="qualityHeader">Quality &amp; limits</h3>

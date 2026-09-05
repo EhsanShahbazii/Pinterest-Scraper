@@ -84,7 +84,7 @@ const I18N = {
 
 const DEFAULTS = {
   lang: 'en', mode: 'search',
-  download: true, details: true, dedup: true,
+  download: true, details: true,
   limit: 25, min_width: 0, min_height: 0,
   workers: 4, delay: 1.0, jitter: 0.5, batch_size: 10, proxy: '',
   show_insights: false,
@@ -121,7 +121,6 @@ function applyLang() {
 function syncDrawerFromSettings() {
   $('opt-download').checked = settings.download;
   $('opt-details').checked = settings.details;
-  $('opt-dedup').checked = settings.dedup;
   $('opt-insights').checked = settings.show_insights;
   $('opt-limit').value = settings.limit;
   $('opt-min-width').value = settings.min_width;
@@ -135,7 +134,6 @@ function syncDrawerFromSettings() {
 function readDrawerToSettings() {
   settings.download = $('opt-download').checked;
   settings.details = $('opt-details').checked;
-  settings.dedup = $('opt-dedup').checked;
   settings.show_insights = $('opt-insights').checked;
   settings.limit = +$('opt-limit').value || DEFAULTS.limit;
   settings.min_width = +$('opt-min-width').value || 0;
@@ -203,8 +201,6 @@ function handleEvent(ev, es) {
   } else if (ev.event === 'progress') {
     if (ev.phase) currentPhase = ev.phase;
     setProgress(ev.count, ev.total || 0);
-  } else if (ev.event === 'dedup') {
-    appendMeta(`· ${t.dupes}: ${ev.duplicates}`);
   } else if (ev.event === 'nothing_new') {
     appendMeta(t.nothingNew);
   } else if (ev.event === 'done') {
@@ -536,8 +532,6 @@ function pmNav(dir) { showPinAt(pmIndex + dir); }
 $('close-pin-modal').addEventListener('click', closePinModal);
 $('pm-prev').addEventListener('click', () => pmNav(-1));
 $('pm-next').addEventListener('click', () => pmNav(1));
-$('pm-prev-in').addEventListener('click', (e) => { e.stopPropagation(); pmNav(-1); });
-$('pm-next-in').addEventListener('click', (e) => { e.stopPropagation(); pmNav(1); });
 $('pin-modal').addEventListener('click', (e) => { if (e.target.id === 'pin-modal') closePinModal(); });
 document.addEventListener('keydown', (e) => {
   if ($('pin-modal').classList.contains('hidden')) return;
@@ -569,73 +563,6 @@ async function runVisualSearch(pinId) {
     showError('visual search failed');
   }
 }
-
-/* ================= History & schedules ================= */
-function fmtAgo(ts) {
-  if (!ts) return '';
-  const m = Math.floor((Date.now() / 1000 - ts) / 60);
-  if (m < 60) return `${m}m`;
-  if (m < 1440) return `${Math.floor(m / 60)}h`;
-  return `${Math.floor(m / 1440)}d`;
-}
-async function loadHistory() {
-  const list = $('history-list');
-  try {
-    const { runs } = await (await fetch('/api/history')).json();
-    if (!runs.length) { list.innerHTML = `<p class="pm-desc">${I18N[settings.lang].noHistory}</p>`; }
-    else {
-      list.innerHTML = '';
-      runs.slice(0, 30).forEach(r => {
-        const item = document.createElement('div');
-        item.className = 'run-item';
-        item.innerHTML = `
-          <div class="ri-main">
-            <span class="ri-q">${escapeHtml(r.query)}</span>
-            <span class="ri-sub">${r.mode} · ${r.count} 📌 · ${fmtAgo(r.ts)}</span>
-          </div>
-          <button class="btn ghost small">${I18N[settings.lang].openRun}</button>`;
-        item.querySelector('.btn').onclick = (e) => {
-          e.stopPropagation();
-          openRun(r.job_id);
-        };
-        item.onclick = () => openRun(r.job_id);
-        list.appendChild(item);
-      });
-    }
-  } catch { list.innerHTML = ''; }
-}
-async function openRun(jobId) {
-  const t = I18N[settings.lang] || I18N.en;
-  const res = await fetch(`/api/runs/${jobId}`);
-  if (!res.ok) return;
-  const data = await res.json();
-  lastPins = data.pins || [];
-  window._lastPins = lastPins;
-  $('stats-card').innerHTML = `<span class="stat-pill">🗂 <b>${lastPins.length}</b> ${t.pins}</span>`;
-  $('stats-card').classList.remove('hidden');
-  $('exp-zip').href = `/api/runs/${jobId}/export/zip`;
-  $('exp-xlsx').href = `/api/runs/${jobId}/export/xlsx`;
-  $('export-bar').classList.toggle('hidden', !lastPins.some(p => p.local_file));
-  $('chart-card').classList.remove('hidden');
-  renderChart();
-  resetFeed(lastPins);
-  openHistory(false);
-}
-function openHistory(open) {
-  const d = $('history-drawer');
-  d.classList.toggle('open', open);
-  d.setAttribute('aria-hidden', String(!open));
-  $('overlay').classList.toggle('hidden', !open);
-  if (open) { loadHistory(); }
-}
-$('history-btn').addEventListener('click', () => openHistory(true));
-$('clear-runs').addEventListener('click', async () => {
-  await fetch('/api/history', { method: 'DELETE' });
-  loadHistory();
-});
-$('close-history').addEventListener('click', () => openHistory(false));
-
-
 
 /* ================= Analytics chart ================= */
 function renderChart() {

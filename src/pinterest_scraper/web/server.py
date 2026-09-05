@@ -27,7 +27,6 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from ..dedupe import DedupeStore
 from ..downloader import download_all
 from ..http import build_session
 from ..scraper import (board_pins, enrich_with_details, related_pins,
@@ -43,7 +42,7 @@ class ScrapeRequest(BaseModel):
     limit: int = Field(default=25, ge=1, le=500)
     download: bool = True
     details: bool = True
-    dedup: bool = True
+    dedup: bool = False
     workers: int = Field(default=4, ge=1, le=16)
     delay: float = Field(default=1.0, ge=0, le=30)
     jitter: float = Field(default=0.5, ge=0, le=10)
@@ -89,17 +88,11 @@ class Job:
         self.done.set()
         self.emit(event="done", status=self.status, error=self.error,
                   total=len(self.pins), stats=self.stats)
-        try:
-            _record_run(self)
-        except Exception:  # noqa: BLE001
-            pass
 
     def _run(self):
         req = self.req
         session = build_session(
             proxy_pool=[p.strip() for p in req.proxy.split(",") if p.strip()] or None)
-        store = (DedupeStore(self.out_dir / ".seen_pins.json", scan_dir=self.out_dir)
-                 if req.dedup else None)
         queries = [q.strip() for q in req.query.split(",") if q.strip()] or [req.query]
         batch = len(queries) > 1
         stem = (queries[0] if not batch else queries[0] + "-batch")
@@ -125,8 +118,6 @@ class Job:
             self._check_cancel()
             new = [p for p in partial if p["pin_id"] not in
                    {q["pin_id"] for q in self.pins}]
-            if store:
-                new = store.filter(new)
             self.pins.extend(new)
             self.emit(event="progress", phase="collect", count=len(self.pins),
                       total=collect_total)
@@ -144,10 +135,6 @@ class Job:
             save_outputs(self.pins, self.out_dir, stem)
         self.emit(event="queries_done", total=len(pins))
 
-        if store:
-            before = len(pins)
-            pins = store.filter(pins)
-            self.emit(event="dedup", duplicates=before - len(pins))
         if not pins:
             self.emit(event="nothing_new", total=0)
             return
@@ -312,71 +299,6 @@ def suggest(q: str = ""):
 
 
 
-# ---------------- runs registry / history ----------------
-REGISTRY = _job_out_dir() / "runs.json"
-
-
-def _record_run(job: "Job") -> None:
-    if job.status == "error" and not job.pins:
-        entry = {
-            "job_id": job.id, "mode": job.req.mode, "query": job.req.query,
-            "count": 0, "ts": time.time(), "status": job.status,
-        }
-    else:
-        stem = (job.req.query.split(",")[0].strip() +
-                ("-batch" if "," in job.req.query else "")).replace(" ", "_")[:40] or "pins"
-        entry = {
-            "job_id": job.id, "mode": job.req.mode, "query": job.req.query,
-            "count": len(job.pins), "ts": time.time(), "status": job.status,
-            "json_file": str((job.out_dir / f"{stem}.json").name),
-            "downloads": (job.stats or {}).get("downloaded", 0),
-        }
-    runs = []
-    if REGISTRY.exists():
-        try:
-            runs = json.loads(REGISTRY.read_text())
-        except (ValueError, OSError):
-            runs = []
-    runs = [r for r in runs if r.get("job_id") != job.id]
-    runs.insert(0, entry)
-    REGISTRY.write_text(json.dumps(runs[-200:], ensure_ascii=False, indent=1))
-
-
-def _load_run_pins(job_id: str) -> list[dict]:
-    runs = []
-    if REGISTRY.exists():
-        try:
-            runs = json.loads(REGISTRY.read_text())
-        except (ValueError, OSError):
-            return []
-    entry = next((r for r in runs if r.get("job_id") == job_id), None)
-    if not entry or not entry.get("json_file"):
-        raise HTTPException(404, "run not found")
-    path = (_job_out_dir() / entry["json_file"]).resolve()
-    if not str(path).startswith(str(_job_out_dir().resolve())) or not path.is_file():
-        raise HTTPException(404, "run data missing")
-    try:
-        return json.loads(path.read_text())
-    except (ValueError, OSError):
-        return []
-
-
-@app.get("/api/history")
-def history():
-    runs = []
-    if REGISTRY.exists():
-        try:
-            runs = json.loads(REGISTRY.read_text())
-        except (ValueError, OSError):
-            runs = []
-    return {"runs": runs}
-
-
-@app.get("/api/runs/{job_id}")
-def run_pins(job_id: str):
-    return {"pins": _load_run_pins(job_id)}
-
-
 @app.get("/api/images/{name}")
 def global_image(name: str):
     path = (_job_out_dir() / "images" / name).resolve()
@@ -435,14 +357,6 @@ def export_job(job_id: str, fmt: str):
     raise HTTPException(400, "format must be zip or xlsx")
 
 
-@app.get("/api/runs/{job_id}/export/{fmt}")
-def export_run(job_id: str, fmt: str):
-    pins = _load_run_pins(job_id)
-    if fmt == "zip":
-        return _zip_response(pins)
-    if fmt == "xlsx":
-        return _xlsx_response(pins)
-    raise HTTPException(400, "format must be zip or xlsx")
 
 
 # ---------------- visual search ----------------
@@ -576,11 +490,6 @@ def delete_images(payload: DeleteImagesIn):
     return {"deleted": deleted}
 
 
-@app.delete("/api/history")
-def clear_history():
-    if REGISTRY.exists():
-        REGISTRY.unlink()
-    return {"ok": True}
 
 
 def main():
