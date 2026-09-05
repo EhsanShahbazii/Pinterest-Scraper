@@ -215,3 +215,13 @@ body {
 .suggest-list li .sug-ico { color: var(--gray-1); flex-shrink: 0; display: grid; place-items: center; }
 .suggest-list li:hover, .suggest-list li.active { background: var(--surface); }
 .suggest-list li b { color: var(--red); font-weight: 700; }
+
+.sug-user { display: flex; align-items: center; gap: 12px; }
+.sug-avatar {
+  width: 38px; height: 38px; border-radius: 50%; object-fit: cover;
+  background: var(--surface); flex-shrink: 0;
+}
+.sug-texts { display: flex; flex-direction: column; line-height: 1.25; }
+.sug-name { font-weight: 600; }
+.sug-verified { color: #0074E8; font-size: .8rem; margin-inline-start: 4px; }
+.sug-sub { font-size: .8rem; color: var(--gray-1); }

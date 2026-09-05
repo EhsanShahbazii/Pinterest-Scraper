@@ -317,14 +317,23 @@ function highlight(q, text) {
 }
 function renderSuggest(q, items) {
   sugItems = items; sugIndex = -1;
-  sugList.innerHTML = items.map(s =>
-    `<li role="option"><span class="sug-ico"><svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M10 2a8 8 0 105.3 14l4.4 4.4 1.4-1.4-4.4-4.4A8 8 0 0010 2z"/></svg></span><span>${highlight(q, s)}</span></li>`
-  ).join('');
+  sugList.innerHTML = items.map(s => {
+    if (s.type === 'user') {
+      return `<li role="option" class="sug-user">
+        <img class="sug-avatar" src="${s.image || ''}" alt="" loading="lazy"
+             onerror="this.style.visibility='hidden'">
+        <span class="sug-texts"><span class="sug-name">${highlight(q, s.text)}
+          ${s.verified ? '<span class="sug-verified" title="Verified">✔</span>' : ''}</span>
+          ${s.sub ? `<span class="sug-sub">${escapeHtml(s.sub)}</span>` : ''}</span>
+      </li>`;
+    }
+    return `<li role="option"><span class="sug-ico"><svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M10 2a8 8 0 105.3 14l4.4 4.4 1.4-1.4-4.4-4.4A8 8 0 0010 2z"/></svg></span><span>${highlight(q, s.text)}</span></li>`;
+  }).join('');
   sugList.classList.toggle('hidden', items.length === 0);
   [...sugList.children].forEach((li, i) =>
     li.addEventListener('mousedown', (e) => {
       e.preventDefault();
-      input.value = sugItems[i];
+      input.value = sugItems[i].text;
       hideSuggest();
       startScrape();
     }));
@@ -352,7 +361,7 @@ input.addEventListener('keydown', (e) => {
     [...sugList.children].forEach((li, i) => li.classList.toggle('active', i === sugIndex));
   } else if (e.key === 'Enter' && sugIndex >= 0) {
     e.preventDefault();
-    input.value = sugItems[sugIndex];
+    input.value = sugItems[sugIndex].text;
     hideSuggest();
     startScrape();
   } else if (e.key === 'Escape') {
