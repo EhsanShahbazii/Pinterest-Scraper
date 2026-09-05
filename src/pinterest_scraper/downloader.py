@@ -50,7 +50,8 @@ def download_image(session: requests.Session, pin: dict, out_dir: Path,
 
 
 def download_all(session: requests.Session, pins: list[dict], out_dir: Path,
-                 workers: int, min_width: int, min_height: int) -> dict:
+                 workers: int, min_width: int, min_height: int,
+                 progress_cb=None) -> dict:
     """Download images concurrently with a live progress bar. Returns stats."""
     out_dir.mkdir(parents=True, exist_ok=True)
     stats = {"downloaded": 0, "skipped_existing": 0, "skipped_small": 0,
@@ -77,11 +78,15 @@ def download_all(session: requests.Session, pins: list[dict], out_dir: Path,
                 if pin["is_video"] and not pin["image_url"]:
                     apply(pin, "VIDEO")
                     prog.update(task, advance=1)
+                    if progress_cb:
+                        progress_cb(sum(stats.values()))
                     continue
                 if pin["width"] and (pin["width"] < min_width
                                      or pin["height"] < min_height):
                     apply(pin, "SMALL")
                     prog.update(task, advance=1)
+                    if progress_cb:
+                        progress_cb(sum(stats.values()))
                     continue
                 futures[pool.submit(download_image, session, pin, out_dir)] = pin
 
@@ -93,5 +98,7 @@ def download_all(session: requests.Session, pins: list[dict], out_dir: Path,
                     err_console.print(f"  pin {pin['pin_id']}: {e}")
                     apply(pin, "")
                 prog.update(task, advance=1)
+                if progress_cb:
+                    progress_cb(sum(stats.values()))
         prog.update(task, description="[green]Downloads done")
     return stats

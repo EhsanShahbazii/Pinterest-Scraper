@@ -173,7 +173,7 @@ def enrich_pin(session: requests.Session, pin: dict) -> dict | None:
 
 def enrich_with_details(session: requests.Session, pins: list[dict],
                         delay: float = 1.0, workers: int = 1,
-                        jitter: float = 0.5) -> None:
+                        jitter: float = 0.5, progress_cb=None) -> None:
     """Refresh stats (saves/likes/comments) via PinResource, concurrently."""
     prog, task = make_progress("[magenta]Fetching pin details", len(pins))
     with prog:
@@ -193,6 +193,8 @@ def enrich_with_details(session: requests.Session, pins: list[dict],
                 else:
                     err_console.print(f"  pin {pins[i]['pin_id']}: details unavailable")
                 prog.update(task, advance=1)
+                if progress_cb:
+                    progress_cb(i + 1)
                 polite_sleep(delay / max(1, workers), jitter)
 
 

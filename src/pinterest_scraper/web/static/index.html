@@ -52,8 +52,14 @@
       <span id="progress-title">…</span>
       <button id="cancel-btn" class="btn ghost small" data-i18n="cancel">Cancel</button>
     </div>
+    <div class="phase-chips" id="phase-chips">
+      <span class="phase-chip" data-phase="collect" data-i18n="phCollect">Collect</span>
+      <span class="phase-chip" data-phase="details" data-i18n="phDetails">Details</span>
+      <span class="phase-chip" data-phase="download" data-i18n="phDownload">Download</span>
+    </div>
     <div class="bar"><div id="progress-bar" class="bar-fill"></div></div>
     <div id="progress-meta" class="progress-meta"></div>
+    <div id="progress-pct" class="progress-pct">0%</div>
   </section>
 
   <!-- stats summary -->
@@ -69,6 +75,7 @@
 
   <!-- results masonry -->
   <section id="grid" class="masonry"></section>
+  <div id="scroll-sentinel" class="scroll-sentinel"></div>
 
   <!-- empty state -->
   <section id="empty" class="empty">

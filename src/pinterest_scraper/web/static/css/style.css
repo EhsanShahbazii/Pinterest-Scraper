@@ -465,3 +465,21 @@ body[data-theme="dark"] { --scroll-thumb: #4a4a4a; --scroll-track: #1a1a1a; }
 }
 .clear-chip { color: var(--gray-1); font-size: .8rem; }
 .clear-chip:hover { color: var(--red); }
+
+/* Phase chips + pct for real progress */
+.phase-chips { display: flex; gap: 6px; margin: 10px 0 12px; flex-wrap: wrap; }
+.phase-chip {
+  font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  padding: 5px 12px; border-radius: 999px; background: var(--surface); color: var(--gray-1);
+  transition: all .25s ease;
+}
+.phase-chip.active { background: var(--red); color: #fff; transform: scale(1.05); }
+.phase-chip.done { background: var(--gray-2); color: var(--ink); }
+.phase-chip.done::after { content: ' ✓'; }
+.progress-pct {
+  position: absolute; inset-inline-end: 20px; top: 14px;
+  font-weight: 800; font-size: 1.05rem; color: var(--red);
+}
+.progress-card { position: relative; }
+.bar-fill { transition: width .35s cubic-bezier(.3,.7,.4,1); }
+.scroll-sentinel { height: 10px; }
