@@ -173,7 +173,11 @@ function listenEvents(jobId) {
 
 function handleEvent(ev, es) {
   const t = I18N[settings.lang] || I18N.en;
-  if (ev.event === 'phase') {
+  if (ev.event === 'query_start') {
+    els_progress(ev);
+  } else if (ev.event === 'queries_done') {
+    els_queries_done(ev);
+  } else if (ev.event === 'phase') {
     const labels = { collect: t.collecting, details: t.details, download: t.downloading };
     showProgress(labels[ev.phase] || ev.phase, ev.phase === 'collect');
   } else if (ev.event === 'progress') {
@@ -595,3 +599,73 @@ function renderChart() {
 /* ================= init ================= */
 initTheme();
 renderRecent();
+
+/* ================= helpers & UI state (consolidated) ================= */
+function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
+
+function els_progress(ev) {
+  const t = I18N[settings.lang] || I18N.en;
+  const msg = document.getElementById('progress-msg');
+  if (msg) msg.textContent = `${t.runningQuery || 'Query'} ${ev.index} ${t.of || 'of'} ${ev.total}: ${ev.query}`;
+}
+function els_queries_done(ev) {
+  const t = I18N[settings.lang] || I18N.en;
+  const msg = document.getElementById('progress-msg');
+  if (msg) msg.textContent = `${t.batchDone || 'All queries done'} — ${ev.total} 📌`;
+}
+
+/* ---------- theme (Spotify-smooth) ---------- */
+function applyTheme(t) {
+  document.body.dataset.theme = t;
+  localStorage.setItem('theme', t);
+  const icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = t === 'dark' ? '☀️' : '🌙';
+  if (window._chart) { window._chart.destroy(); window._chart = null; renderChart(); }
+}
+function initTheme() {
+  const saved = localStorage.getItem('theme');
+  const sys = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  applyTheme(saved || sys);
+  const btn = document.getElementById('theme-btn');
+  if (btn) btn.onclick = () => applyTheme(document.body.dataset.theme === 'dark' ? 'light' : 'dark');
+}
+
+/* ---------- recent searches / starter chips ---------- */
+function getRecent() { try { return JSON.parse(localStorage.getItem('recentSearches') || '[]'); } catch { return []; } }
+function addRecent(q) {
+  if (!q) return;
+  const list = getRecent().filter(x => x !== q);
+  list.unshift(q);
+  localStorage.setItem('recentSearches', JSON.stringify(list.slice(0, 8)));
+  renderRecent();
+}
+function renderRecent() {
+  const row = document.getElementById('recent-row');
+  if (!row) return;
+  const list = getRecent();
+  const starters = ['taylor swift', 'ana de armas', 'interior design', 'minimal wallpaper'];
+  const items = list.length ? list : (lastPins && lastPins.length ? [] : starters);
+  if (!items.length) { row.classList.add('hidden'); return; }
+  row.classList.remove('hidden');
+  const t = I18N[settings.lang] || I18N.en;
+  row.innerHTML = `<span class="row-label">${list.length ? (t.recent || 'Recent:') : 'Try:'}</span>` +
+    items.map(q => `<button class="chip recent-chip">${esc(q)}</button>`).join('');
+  row.querySelectorAll('.recent-chip').forEach(b => b.onclick = () => {
+    document.getElementById('search-input').value = b.textContent;
+    startScrape();
+  });
+}
+
+/* ---------- skeletons ---------- */
+function showSkeletons(n = 12) {
+  const grid = document.getElementById('grid');
+  if (!grid) return;
+  grid.classList.remove('hidden');
+  grid.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const d = document.createElement('div');
+    d.className = 'skeleton';
+    d.style.height = (140 + Math.random() * 180) + 'px';
+    grid.appendChild(d);
+  }
+}
