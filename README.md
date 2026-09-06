@@ -1,5 +1,13 @@
 # 🎨 Pinterest Scraper
 
+<!-- Row 1: Main search results -->
+<p align="center">
+  <img src="docs/screenshots/2.png" alt="Web app — results & summary" width="95%">
+</p>
+<p align="center">
+  <em>Results — Pinterest-styled search view with live stats summary and responsive masonry grid.</em>
+</p>
+
 > Scrape Pinterest the easy way — original-quality pin images, rich structured
 > metadata, and a beautiful experience in both the **browser** and the
 > **terminal**. No login, no API key, no code required.
@@ -68,14 +76,6 @@ never loses work.
 - 🔮 **Visual search** — "More like this" finds visually similar pins directly from any pin
 - ⬇️ **Direct exports** — one-click ZIP download of images and XLSX metadata spreadsheets
 - 📊 **Engagement analytics** — interactive Chart.js bar chart for saves and engagement metrics
-
-<!-- Row 1: Main search results -->
-<p align="center">
-  <img src="docs/screenshots/2.png" alt="Web app — results & summary" width="95%">
-</p>
-<p align="center">
-  <em>Results — Pinterest-styled search view with live stats summary and responsive masonry grid.</em>
-</p>
 
 <!-- Row 2: Closeup Modal & Gallery DAM -->
 <p align="center">
