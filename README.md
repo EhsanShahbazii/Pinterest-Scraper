@@ -255,6 +255,7 @@ PRs welcome! `pip install -e .` for a dev install, then run
 No coding needed — run the built-in web app:
 
 ```bash
+cd src
 pinterest-scraper-web      # then open http://127.0.0.1:8000
 # or: python -m pinterest_scraper.web
 ```
